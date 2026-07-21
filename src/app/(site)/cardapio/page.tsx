@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -70,7 +71,9 @@ export default async function CardapioPage({
         </p>
       </div>
 
-      <MenuSearch defaultValue={busca} />
+      <Suspense fallback={null}>
+        <MenuSearch defaultValue={busca} />
+      </Suspense>
 
       <Tabs defaultValue={defaultTab} className="mt-6">
         <TabsList className="mb-8 flex-wrap justify-center">

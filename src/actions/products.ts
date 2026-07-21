@@ -51,7 +51,6 @@ export async function upsertProductAction(
   if (data.addonIds?.length) {
     await prisma.productAddon.createMany({
       data: data.addonIds.map((addonId) => ({ productId: product.id, addonId })),
-      skipDuplicates: true,
     });
   }
 
