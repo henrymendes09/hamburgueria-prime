@@ -1,0 +1,136 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource/anton";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/inter/800.css";
+
+/*
+  Identidade visual — Hamburgueria Prime
+  ---------------------------------------
+  Preto-brasa (ink) + Vermelho-fogo (flame) + Branco-papel (paper).
+  Assinatura: bordas "rasgadas" (jagged-edge) que imitam o corte de
+  papel manteiga de lanchonete, e selos rotacionados como carimbo de açougue.
+*/
+
+:root {
+  --color-ink: #0e0d0c;
+  --color-ink-soft: #1a1817;
+  --color-flame: #e01b22;
+  --color-flame-dark: #a3121a;
+  --color-flame-light: #ff4d4d;
+  --color-paper: #faf7f2;
+  --color-paper-dim: #f0ebe2;
+  --color-ash: #6b6560;
+  --color-ash-light: #9c948c;
+  --color-gold: #e8a33d;
+
+  --font-display: "Anton", "Arial Narrow", sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+@theme inline {
+  --color-ink: var(--color-ink);
+  --color-ink-soft: var(--color-ink-soft);
+  --color-flame: var(--color-flame);
+  --color-flame-dark: var(--color-flame-dark);
+  --color-flame-light: var(--color-flame-light);
+  --color-paper: var(--color-paper);
+  --color-paper-dim: var(--color-paper-dim);
+  --color-ash: var(--color-ash);
+  --color-ash-light: var(--color-ash-light);
+  --color-gold: var(--color-gold);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+}
+
+* {
+  border-color: var(--color-paper-dim);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+}
+
+.dark body {
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+/* Assinatura visual: borda rasgada estilo embalagem de lanchonete */
+.torn-edge {
+  position: relative;
+  clip-path: polygon(
+    0% 4%, 3% 0%, 7% 3%, 11% 0%, 15% 4%, 19% 0%, 23% 3%, 27% 0%, 31% 4%,
+    35% 0%, 39% 3%, 43% 0%, 47% 4%, 51% 0%, 55% 3%, 59% 0%, 63% 4%,
+    67% 0%, 71% 3%, 75% 0%, 79% 4%, 83% 0%, 87% 3%, 91% 0%, 95% 4%, 100% 0%,
+    100% 100%, 0% 100%
+  );
+}
+
+.torn-edge-bottom {
+  position: relative;
+  clip-path: polygon(
+    0% 0%, 100% 0%, 100% 96%,
+    95% 100%, 91% 97%, 87% 100%, 83% 96%, 79% 100%, 75% 97%, 71% 100%,
+    67% 96%, 63% 100%, 59% 97%, 55% 100%, 51% 96%, 47% 100%, 43% 97%,
+    39% 100%, 35% 96%, 31% 100%, 27% 97%, 23% 100%, 19% 96%, 15% 100%,
+    11% 97%, 7% 100%, 3% 96%, 0% 100%
+  );
+}
+
+/* Selo/carimbo rotacionado — usado em badges de promoção */
+.stamp {
+  transform: rotate(-8deg);
+}
+
+::selection {
+  background: var(--color-flame);
+  color: var(--color-paper);
+}
+
+/* Scrollbar discreta */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-ash-light);
+  border-radius: 999px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Foco visível para acessibilidade */
+:focus-visible {
+  outline: 3px solid var(--color-flame);
+  outline-offset: 2px;
+}
+/* Oculta completamente o portal de ferramentas de desenvolvimento do Next.js. */
+nextjs-portal {
+  display: none !important;
+}

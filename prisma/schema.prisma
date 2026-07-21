@@ -1,0 +1,358 @@
+// Hamburgueria Prime — Prisma schema
+// Banco de dados: SQLite (arquivo local, zero configuração).
+// Para produção, troque o provider para "postgresql" e aponte DATABASE_URL
+// para sua instância (Neon, Supabase, RDS, etc). O restante do schema
+// funciona sem alterações em ambos os provedores.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------------------
+// Autenticação / Usuários
+// ------------------------------------------------------------------
+
+enum Role {
+  CLIENTE
+  ADMIN
+  ENTREGADOR
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified DateTime?
+  passwordHash  String?
+  phone         String?
+  cpf           String?
+  image         String?
+  role          Role      @default(CLIENTE)
+  blocked       Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastAccess    DateTime  @default(now())
+
+  accounts      Account[]
+  sessions      Session[]
+  addresses     Address[]
+  cards         Card[]
+  orders        Order[]
+  favorites     Favorite[]
+  reviews       Review[]
+  coupons       CouponRedemption[]
+  resetTokens   PasswordResetToken[]
+  deliveries    Order[]   @relation("EntregadorOrders")
+
+  @@index([email])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expires   DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Address {
+  id           String   @id @default(cuid())
+  userId       String
+  label        String   @default("Casa")
+  cep          String
+  street       String
+  number       String
+  complement   String?
+  neighborhood String
+  city         String
+  state        String
+  reference    String?
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders Order[]
+}
+
+enum CardBrand {
+  VISA
+  MASTERCARD
+  ELO
+  AMEX
+  OUTRO
+}
+
+model Card {
+  id         String    @id @default(cuid())
+  userId     String
+  brand      CardBrand @default(OUTRO)
+  holderName String
+  last4      String
+  expMonth   Int
+  expYear    Int
+  isDefault  Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ------------------------------------------------------------------
+// Cardápio
+// ------------------------------------------------------------------
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  icon      String    @default("🍔")
+  order     Int       @default(0)
+  products  Product[]
+}
+
+model Addon {
+  id       String   @id @default(cuid())
+  name     String
+  price    Float    @default(0)
+  type     String   @default("EXTRA") // EXTRA | REMOVER | PONTO
+  products ProductAddon[]
+}
+
+model ProductAddon {
+  id        String  @id @default(cuid())
+  productId String
+  addonId   String
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  addon   Addon   @relation(fields: [addonId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, addonId])
+}
+
+model Product {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  description    String
+  ingredients    String
+  image          String
+  price          Float
+  promoPrice     Float?
+  available      Boolean  @default(true)
+  featured       Boolean  @default(false)
+  categoryId     String
+  soldCount       Int     @default(0)
+  rating         Float    @default(4.8)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  category    Category       @relation(fields: [categoryId], references: [id])
+  addons      ProductAddon[]
+  orderItems  OrderItem[]
+  favorites   Favorite[]
+  reviews     Review[]
+
+  @@index([categoryId])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String?
+  rating    Int
+  comment   String
+  createdAt DateTime @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+// ------------------------------------------------------------------
+// Cupons e Promoções
+// ------------------------------------------------------------------
+
+enum CouponType {
+  PERCENTUAL
+  VALOR
+}
+
+model Coupon {
+  id           String     @id @default(cuid())
+  code         String     @unique
+  type         CouponType
+  value        Float
+  maxUses      Int?
+  usedCount    Int        @default(0)
+  singleUsePerUser Boolean @default(true)
+  minOrderValue Float     @default(0)
+  expiresAt    DateTime
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+
+  redemptions CouponRedemption[]
+  orders      Order[]
+}
+
+model CouponRedemption {
+  id        String   @id @default(cuid())
+  couponId  String
+  userId    String
+  orderId   String?  @unique
+  createdAt DateTime @default(now())
+
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ------------------------------------------------------------------
+// Pedidos
+// ------------------------------------------------------------------
+
+enum OrderStatus {
+  RECEBIDO
+  ACEITO
+  PREPARANDO
+  SAIU_PARA_ENTREGA
+  ENTREGUE
+  CANCELADO
+  RECUSADO
+}
+
+enum PaymentMethod {
+  PIX
+  CARTAO
+  DINHEIRO
+}
+
+enum PaymentStatus {
+  PENDENTE
+  PAGO
+  FALHOU
+}
+
+enum DeliveryType {
+  ENTREGA
+  RETIRADA
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  number          Int           @unique
+  userId          String
+  addressId       String?
+  status          OrderStatus   @default(RECEBIDO)
+  deliveryType    DeliveryType  @default(ENTREGA)
+  scheduledFor    DateTime?
+  paymentMethod   PaymentMethod
+  paymentStatus   PaymentStatus @default(PENDENTE)
+  changeFor       Float?
+  subtotal        Float
+  deliveryFee     Float         @default(0)
+  discount        Float         @default(0)
+  total           Float
+  notes           String?
+  couponId        String?
+  entregadorId    String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  acceptedAt      DateTime?
+  deliveredAt     DateTime?
+
+  user       User        @relation(fields: [userId], references: [id])
+  address    Address?    @relation(fields: [addressId], references: [id])
+  coupon     Coupon?     @relation(fields: [couponId], references: [id])
+  entregador User?       @relation("EntregadorOrders", fields: [entregadorId], references: [id])
+  items      OrderItem[]
+  statusLog  OrderStatusLog[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model OrderItem {
+  id            String   @id @default(cuid())
+  orderId       String
+  productId     String
+  productName   String
+  quantity      Int
+  unitPrice     Float
+  addonsLabel   String?
+  removedLabel  String?
+  notes         String?
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+}
+
+model OrderStatusLog {
+  id        String      @id @default(cuid())
+  orderId   String
+  status    OrderStatus
+  createdAt DateTime    @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
