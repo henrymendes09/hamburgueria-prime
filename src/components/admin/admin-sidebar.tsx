@@ -26,7 +26,7 @@ const LINKS = [
   { href: "/admin/equipe", label: "Equipe", icon: UserCog },
 ];
 
-export function AdminSidebar({ userName }: { userName: string }) {
+export function AdminSidebar({ userName, restaurantSlug }: { userName: string; restaurantSlug?: string }) {
   const pathname = usePathname();
 
   return (
@@ -59,7 +59,7 @@ export function AdminSidebar({ userName }: { userName: string }) {
 
         <div className="border-t border-white/10 p-3 space-y-1">
           <Link
-            href="/"
+            href={restaurantSlug ? `/loja/${restaurantSlug}` : "/"}
             target="_blank"
             className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-paper/70 hover:bg-white/5"
           >

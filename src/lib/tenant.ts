@@ -1,17 +1,23 @@
 import "server-only";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export const DEFAULT_RESTAURANT_SLUG = "hamburgueria-prime";
+export const RESTAURANT_COOKIE = "hp_restaurant";
 
 export async function getPublicRestaurant() {
   const requestHeaders = await headers();
   const explicitSlug = requestHeaders.get("x-restaurant-slug");
-  const slug = explicitSlug || process.env.DEFAULT_RESTAURANT_SLUG || DEFAULT_RESTAURANT_SLUG;
-  return prisma.restaurant.findUniqueOrThrow({ where: { slug } });
+  const selectedSlug = (await cookies()).get(RESTAURANT_COOKIE)?.value;
+  const slug = explicitSlug || selectedSlug || process.env.DEFAULT_RESTAURANT_SLUG || DEFAULT_RESTAURANT_SLUG;
+  const restaurant = await prisma.restaurant.findFirst({
+    where: { slug, status: { in: ["ACTIVE", "TRIALING"] } },
+  });
+  if (restaurant) return restaurant;
+  return prisma.restaurant.findUniqueOrThrow({ where: { slug: process.env.DEFAULT_RESTAURANT_SLUG || DEFAULT_RESTAURANT_SLUG } });
 }
 
 export async function requireRestaurantAdmin() {

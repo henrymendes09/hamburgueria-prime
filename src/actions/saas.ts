@@ -44,5 +44,5 @@ export async function createRestaurantAction(formData: FormData) {
   } catch (error) {
     console.error("Falha ao iniciar assinatura", error);
   }
-  redirect("/admin/login?cadastro=sucesso");
+  redirect(`/comece/sucesso?loja=${encodeURIComponent(result.restaurant.slug)}`);
 }
