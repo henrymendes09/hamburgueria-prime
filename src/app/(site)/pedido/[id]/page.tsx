@@ -62,6 +62,21 @@ export default async function PedidoPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
 
+        {order.paymentMethod === "PIX" && order.pixQrCodeBase64 && order.pixQrCode && (
+          <div className="mt-6 rounded-2xl border-2 border-flame/20 bg-flame/5 p-5 text-center">
+            <h3 className="font-display text-xl text-ink">Pague com Pix</h3>
+            <p className="mt-1 text-sm normal-case text-ash">Escaneie o QR Code ou copie o código abaixo.</p>
+            <img
+              src={`data:image/png;base64,${order.pixQrCodeBase64}`}
+              alt="QR Code para pagamento Pix"
+              className="mx-auto my-4 h-56 w-56 rounded-xl bg-white p-2"
+            />
+            <div className="rounded-xl bg-white p-3 text-left text-xs normal-case text-ash break-all select-all">
+              {order.pixQrCode}
+            </div>
+          </div>
+        )}
+
         {order.address && (
           <div className="mt-4 border-t border-ink/5 pt-4 text-sm text-ash normal-case">
             <p className="font-semibold text-ink mb-1">Endereço de entrega</p>

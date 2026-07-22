@@ -95,7 +95,8 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
     }
 
     setIsSubmitting(true);
-    const result = await checkoutAction(
+    try {
+      const result = await checkoutAction(
       {
         name,
         phone,
@@ -110,15 +111,19 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
         couponCode: coupon?.code,
       },
       items
-    );
-    setIsSubmitting(false);
+      );
 
-    if (result.success) {
-      clear();
-      toast.success(`Pedido #${result.orderNumber} realizado com sucesso!`);
-      router.push(`/pedido/${result.orderId}`);
-    } else {
-      toast.error(result.message);
+      if (result.success) {
+        clear();
+        toast.success(`Pedido #${result.orderNumber} realizado com sucesso!`);
+        router.push(`/pedido/${result.orderId}`);
+      } else {
+        toast.error(result.message);
+      }
+    } catch {
+      toast.error("Não foi possível enviar o pedido. Tente novamente.");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -149,6 +154,7 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
           <h2 className="font-display text-xl text-ink mb-4">Entrega</h2>
           <div className="grid grid-cols-2 gap-3 mb-5">
             <button
+              type="button"
               onClick={() => setDeliveryType("ENTREGA")}
               className={cn(
                 "flex items-center justify-center gap-2 rounded-xl border-2 py-3 text-sm font-bold uppercase",
@@ -158,6 +164,7 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
               <Truck className="h-4 w-4" /> Entrega
             </button>
             <button
+              type="button"
               onClick={() => setDeliveryType("RETIRADA")}
               className={cn(
                 "flex items-center justify-center gap-2 rounded-xl border-2 py-3 text-sm font-bold uppercase",
@@ -202,6 +209,7 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
                     </label>
                   ))}
                   <button
+                    type="button"
                     onClick={() => setUseNewAddress(true)}
                     className={cn(
                       "text-sm font-bold text-flame",
@@ -273,6 +281,7 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
           <h2 className="font-display text-xl text-ink mb-4">Pagamento</h2>
           <div className="grid grid-cols-3 gap-3">
             <button
+              type="button"
               onClick={() => setPaymentMethod("PIX")}
               className={cn(
                 "flex flex-col items-center gap-1.5 rounded-xl border-2 py-3 text-xs font-bold uppercase",
@@ -282,6 +291,7 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
               <QrCode className="h-5 w-5" /> Pix
             </button>
             <button
+              type="button"
               onClick={() => setPaymentMethod("CARTAO")}
               className={cn(
                 "flex flex-col items-center gap-1.5 rounded-xl border-2 py-3 text-xs font-bold uppercase",
@@ -291,6 +301,7 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
               <CreditCard className="h-5 w-5" /> Cartão
             </button>
             <button
+              type="button"
               onClick={() => setPaymentMethod("DINHEIRO")}
               className={cn(
                 "flex flex-col items-center gap-1.5 rounded-xl border-2 py-3 text-xs font-bold uppercase",

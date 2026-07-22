@@ -27,9 +27,11 @@ const NAV_LINKS = [
 
 export function Header() {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const items = useCartStore((s) => s.items);
   const openCart = useCartStore((s) => s.open);
+  const clearCart = useCartStore((s) => s.clear);
+  const syncCartOwner = useCartStore((s) => s.syncOwner);
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
@@ -39,6 +41,16 @@ export function Header() {
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    if (status === "loading") return;
+    syncCartOwner(session?.user?.id ?? null);
+  }, [session?.user?.id, status, syncCartOwner]);
+
+  async function handleSignOut() {
+    clearCart();
+    await signOut({ callbackUrl: "/" });
+  }
 
   return (
     <header
@@ -106,7 +118,7 @@ export function Header() {
                   </>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })}>
+                <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="h-4 w-4" /> Sair
                 </DropdownMenuItem>
               </DropdownMenuContent>

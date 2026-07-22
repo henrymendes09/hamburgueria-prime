@@ -298,6 +298,9 @@ model Order {
   scheduledFor    DateTime?
   paymentMethod   PaymentMethod
   paymentStatus   PaymentStatus @default(PENDENTE)
+  paymentExternalId String?
+  pixQrCode        String?
+  pixQrCodeBase64  String?
   changeFor       Float?
   subtotal        Float
   deliveryFee     Float         @default(0)

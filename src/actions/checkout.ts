@@ -5,13 +5,63 @@ import { auth } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { checkoutSchema, DELIVERY_FEE, FREE_DELIVERY_THRESHOLD } from "@/lib/validations";
 import { CartItem } from "@/types/cart";
-import { itemPrice } from "@/lib/cart-store";
 import { headers } from "next/headers";
 import { emitOrderEvent } from "@/lib/order-events";
+import crypto from "crypto";
 
 type CheckoutResult =
   | { success: true; orderId: string; orderNumber: number }
   | { success: false; message: string };
+
+type PixPayment = {
+  id: string;
+  qrCode: string;
+  qrCodeBase64: string;
+};
+
+function calculateItemPrice(item: CartItem): number {
+  const addonsTotal = item.addons.reduce((sum, addon) => sum + addon.price, 0);
+  return (item.unitPrice + addonsTotal) * item.quantity;
+}
+
+async function createPixPayment(input: {
+  amount: number;
+  email: string;
+  description: string;
+}): Promise<PixPayment> {
+  const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+  if (!accessToken || accessToken.length < 30) {
+    throw new Error("O pagamento Pix ainda não está configurado. Escolha cartão ou dinheiro.");
+  }
+
+  const response = await fetch("https://api.mercadopago.com/v1/payments", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      "X-Idempotency-Key": crypto.randomUUID(),
+    },
+    body: JSON.stringify({
+      transaction_amount: Number(input.amount.toFixed(2)),
+      description: input.description,
+      payment_method_id: "pix",
+      payer: { email: input.email },
+    }),
+    cache: "no-store",
+  });
+
+  const payment = await response.json();
+  const transaction = payment?.point_of_interaction?.transaction_data;
+  if (!response.ok || !payment?.id || !transaction?.qr_code || !transaction?.qr_code_base64) {
+    throw new Error(payment?.message || "Não foi possível gerar o Pix. Escolha outro pagamento.");
+  }
+
+  return {
+    id: String(payment.id),
+    qrCode: transaction.qr_code,
+    qrCodeBase64: transaction.qr_code_base64,
+  };
+}
 
 export async function checkoutAction(
   rawInput: unknown,
@@ -51,7 +101,7 @@ export async function checkoutAction(
     }
   }
 
-  const subtotal = items.reduce((sum, item) => sum + itemPrice(item), 0);
+  const subtotal = items.reduce((sum, item) => sum + calculateItemPrice(item), 0);
 
   // Endereço: usa existente ou cria um novo a partir do checkout
   let addressId: string | undefined;
@@ -101,6 +151,22 @@ export async function checkoutAction(
 
   const total = Math.max(subtotal + deliveryFee - discount, 0);
 
+  let pixPayment: PixPayment | null = null;
+  if (data.paymentMethod === "PIX") {
+    try {
+      pixPayment = await createPixPayment({
+        amount: total,
+        email: session.user.email ?? "cliente@hamburgueriaprime.com.br",
+        description: "Pedido Hamburgueria Prime",
+      });
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Não foi possível gerar o Pix.",
+      };
+    }
+  }
+
   const order = await prisma.$transaction(async (tx) => {
     const lastOrder = await tx.order.findFirst({
       orderBy: { number: "desc" },
@@ -115,6 +181,9 @@ export async function checkoutAction(
         deliveryType: data.deliveryType,
         scheduledFor: data.scheduledFor ? new Date(data.scheduledFor) : null,
         paymentMethod: data.paymentMethod,
+        paymentExternalId: pixPayment?.id,
+        pixQrCode: pixPayment?.qrCode,
+        pixQrCodeBase64: pixPayment?.qrCodeBase64,
         changeFor: data.changeFor,
         subtotal,
         deliveryFee,
