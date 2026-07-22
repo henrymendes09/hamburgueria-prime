@@ -1,8 +1,13 @@
 import { AdminLoginForm } from "@/components/admin/admin-login-form";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export const metadata = { title: "Painel Administrativo — Login" };
 
-export default function AdminLoginPage() {
+export default async function AdminLoginPage() {
+  const session = await auth();
+  if (session?.user?.role === "ADMIN") redirect("/admin");
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-ink px-4">
       <div className="w-full max-w-sm">

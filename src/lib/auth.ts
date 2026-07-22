@@ -64,18 +64,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.id = user.id as string;
         token.role = (user as { role?: string }).role ?? "CLIENTE";
+        token.roleCheckedAt = Date.now();
       }
-      // Mantém a role atualizada em cada requisição, refletindo mudanças feitas no admin
-      if (token.id) {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: { role: true, blocked: true, name: true, image: true },
-        });
-        if (dbUser) {
-          token.role = dbUser.role;
-          token.blocked = dbUser.blocked;
-          token.name = dbUser.name;
-          token.picture = dbUser.image;
+
+      const roleCheckedAt = Number(token.roleCheckedAt ?? 0);
+      const shouldRefreshRole = token.id && Date.now() - roleCheckedAt > 5 * 60 * 1000;
+
+      if (shouldRefreshRole) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { role: true, blocked: true, name: true, image: true },
+          });
+          if (dbUser) {
+            token.role = dbUser.role;
+            token.blocked = dbUser.blocked;
+            token.name = dbUser.name;
+            token.picture = dbUser.image;
+            token.roleCheckedAt = Date.now();
+          }
+        } catch (error) {
+          console.error("Falha ao atualizar a sessão; mantendo o token atual.", error);
         }
       }
       return token;
