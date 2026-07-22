@@ -356,3 +356,14 @@ model ContactMessage {
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
 }
+
+model SiteVisit {
+  id          String   @id @default(cuid())
+  visitorHash String
+  path        String
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([visitorHash])
+  @@index([path, createdAt])
+}

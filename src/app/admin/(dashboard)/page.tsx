@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/utils";
-import { DollarSign, ShoppingBag, Clock, Users } from "lucide-react";
+import { DollarSign, ShoppingBag, Clock, Users, Eye, UserRoundSearch, MousePointerClick } from "lucide-react";
 import { RevenueChart } from "@/components/admin/revenue-chart";
 import { TopProductsChart } from "@/components/admin/top-products-chart";
 
@@ -11,7 +11,7 @@ export default async function AdminDashboardPage() {
   startOfToday.setHours(0, 0, 0, 0);
   const sevenDaysAgo = new Date(startOfToday.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  const [ordersToday, ordersInProgress, revenueAgg, customersCount, topProducts, last7DaysOrders] =
+  const [ordersToday, ordersInProgress, revenueAgg, customersCount, topProducts, last7DaysOrders, visitsToday, visitorsTodayRows, allVisitorsRows, topPages] =
     await Promise.all([
       prisma.order.count({ where: { createdAt: { gte: startOfToday } } }),
       prisma.order.count({
@@ -33,6 +33,19 @@ export default async function AdminDashboardPage() {
           status: { not: "CANCELADO" },
         },
         select: { createdAt: true, total: true },
+      }),
+      prisma.siteVisit.count({ where: { createdAt: { gte: startOfToday } } }),
+      prisma.siteVisit.groupBy({
+        by: ["visitorHash"],
+        where: { createdAt: { gte: startOfToday } },
+      }),
+      prisma.siteVisit.groupBy({ by: ["visitorHash"] }),
+      prisma.siteVisit.groupBy({
+        by: ["path"],
+        where: { createdAt: { gte: sevenDaysAgo } },
+        _count: { path: true },
+        orderBy: { _count: { path: "desc" } },
+        take: 5,
       }),
     ]);
 
@@ -57,6 +70,9 @@ export default async function AdminDashboardPage() {
     { label: "Em andamento", value: ordersInProgress, icon: Clock, color: "bg-amber-500" },
     { label: "Faturamento hoje", value: formatMoney(revenueAgg._sum.total ?? 0), icon: DollarSign, color: "bg-emerald-500" },
     { label: "Clientes cadastrados", value: customersCount, icon: Users, color: "bg-flame" },
+    { label: "Visitantes hoje", value: visitorsTodayRows.length, icon: UserRoundSearch, color: "bg-violet-500" },
+    { label: "Visualizações hoje", value: visitsToday, icon: Eye, color: "bg-cyan-500" },
+    { label: "Visitantes no total", value: allVisitorsRows.length, icon: MousePointerClick, color: "bg-indigo-500" },
   ];
 
   return (
@@ -66,7 +82,7 @@ export default async function AdminDashboardPage() {
         <p className="text-ash normal-case mt-1">Visão geral da Hamburgueria Prime</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
         {stats.map((stat) => (
           <div key={stat.label} className="rounded-2xl bg-white p-5 border-2 border-ink/5">
             <div className={`flex h-10 w-10 items-center justify-center rounded-full ${stat.color} text-white mb-3`}>
@@ -87,6 +103,22 @@ export default async function AdminDashboardPage() {
           <h2 className="font-display text-lg text-ink mb-4">Produtos mais vendidos</h2>
           <TopProductsChart data={topProducts} />
         </div>
+      </div>
+
+      <div className="rounded-2xl bg-white p-6 border-2 border-ink/5">
+        <h2 className="font-display text-lg text-ink mb-4">Páginas mais acessadas (últimos 7 dias)</h2>
+        {topPages.length === 0 ? (
+          <p className="text-sm text-ash normal-case">As visitas começarão a aparecer aqui após os próximos acessos.</p>
+        ) : (
+          <div className="space-y-3">
+            {topPages.map((page) => (
+              <div key={page.path} className="flex items-center justify-between border-b border-ink/5 pb-3 last:border-0">
+                <span className="text-sm font-semibold normal-case text-ink">{page.path}</span>
+                <span className="text-sm font-bold text-flame">{page._count.path} acessos</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
