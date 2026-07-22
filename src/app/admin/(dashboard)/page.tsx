@@ -11,7 +11,7 @@ export default async function AdminDashboardPage() {
   startOfToday.setHours(0, 0, 0, 0);
   const sevenDaysAgo = new Date(startOfToday.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  const [ordersToday, ordersInProgress, revenueAgg, customersCount, topProducts, last7DaysOrders, visitsToday, visitorsTodayRows, allVisitorsRows, topPages] =
+  const [ordersToday, ordersInProgress, revenueAgg, customersCount, topProducts, last7DaysOrders, visitsToday, visitorsTodayRows, allVisitorsRows] =
     await Promise.all([
       prisma.order.count({ where: { createdAt: { gte: startOfToday } } }),
       prisma.order.count({
@@ -40,13 +40,6 @@ export default async function AdminDashboardPage() {
         where: { createdAt: { gte: startOfToday } },
       }),
       prisma.siteVisit.groupBy({ by: ["visitorHash"] }),
-      prisma.siteVisit.groupBy({
-        by: ["path"],
-        where: { createdAt: { gte: sevenDaysAgo } },
-        _count: { path: true },
-        orderBy: { _count: { path: "desc" } },
-        take: 5,
-      }),
     ]);
 
   const days: { date: string; total: number }[] = [];
@@ -105,21 +98,6 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl bg-white p-6 border-2 border-ink/5">
-        <h2 className="font-display text-lg text-ink mb-4">Páginas mais acessadas (últimos 7 dias)</h2>
-        {topPages.length === 0 ? (
-          <p className="text-sm text-ash normal-case">As visitas começarão a aparecer aqui após os próximos acessos.</p>
-        ) : (
-          <div className="space-y-3">
-            {topPages.map((page) => (
-              <div key={page.path} className="flex items-center justify-between border-b border-ink/5 pb-3 last:border-0">
-                <span className="text-sm font-semibold normal-case text-ink">{page.path}</span>
-                <span className="text-sm font-bold text-flame">{page._count.path} acessos</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }
