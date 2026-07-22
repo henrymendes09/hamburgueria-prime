@@ -64,7 +64,7 @@ export function OrderTracking({
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         {ORDER_STATUS_STEPS.map((step, index) => {
           const Icon = STEP_ICONS[step];
           const isDone = index <= currentIndex;
@@ -90,7 +90,7 @@ export function OrderTracking({
               </div>
               <span
                 className={cn(
-                  "mt-2 text-center text-[10px] font-bold uppercase leading-tight",
+                  "mt-2 flex min-h-8 w-full items-start justify-center text-center text-[10px] font-bold uppercase leading-tight",
                   isDone ? "text-ink" : "text-ash-light"
                 )}
               >
