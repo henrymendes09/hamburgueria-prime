@@ -1,16 +1,19 @@
 import { prisma } from "@/lib/prisma";
 import { CardapioManager } from "@/components/admin/cardapio-manager";
+import { requireRestaurantAdmin } from "@/lib/tenant";
 
 export const metadata = { title: "Gestão de Cardápio" };
 
 export default async function AdminCardapioPage() {
+  const { restaurantId } = await requireRestaurantAdmin();
   const [products, categories, addons] = await Promise.all([
     prisma.product.findMany({
+      where: { restaurantId },
       include: { category: true, addons: { include: { addon: true } } },
       orderBy: { name: "asc" },
     }),
-    prisma.category.findMany({ orderBy: { order: "asc" } }),
-    prisma.addon.findMany({ orderBy: { name: "asc" } }),
+    prisma.category.findMany({ where: { restaurantId }, orderBy: { order: "asc" } }),
+    prisma.addon.findMany({ where: { restaurantId }, orderBy: { name: "asc" } }),
   ]);
 
   const productsData = products.map((p) => ({

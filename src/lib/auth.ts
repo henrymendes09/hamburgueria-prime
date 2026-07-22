@@ -36,6 +36,8 @@ const providers: Provider[] = [
         email: user.email,
         image: user.image,
         role: user.role,
+        restaurantId: user.restaurantId,
+        isPlatformAdmin: user.isPlatformAdmin,
       };
     },
   }),
@@ -64,6 +66,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.id = user.id as string;
         token.role = (user as { role?: string }).role ?? "CLIENTE";
+        token.restaurantId = (user as { restaurantId?: string | null }).restaurantId ?? null;
+        token.isPlatformAdmin = (user as { isPlatformAdmin?: boolean }).isPlatformAdmin ?? false;
         token.roleCheckedAt = Date.now();
       }
 
@@ -74,13 +78,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
-            select: { role: true, blocked: true, name: true, image: true },
+            select: { role: true, blocked: true, name: true, image: true, restaurantId: true, isPlatformAdmin: true },
           });
           if (dbUser) {
             token.role = dbUser.role;
             token.blocked = dbUser.blocked;
             token.name = dbUser.name;
             token.picture = dbUser.image;
+            token.restaurantId = dbUser.restaurantId;
+            token.isPlatformAdmin = dbUser.isPlatformAdmin;
             token.roleCheckedAt = Date.now();
           }
         } catch (error) {
@@ -94,6 +100,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.id as string;
         session.user.role = token.role as string;
         session.user.blocked = token.blocked as boolean;
+        session.user.restaurantId = token.restaurantId as string | null;
+        session.user.isPlatformAdmin = Boolean(token.isPlatformAdmin);
       }
       return session;
     },

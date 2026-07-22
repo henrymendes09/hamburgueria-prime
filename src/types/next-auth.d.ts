@@ -6,6 +6,8 @@ declare module "next-auth" {
       id: string;
       role: string;
       blocked: boolean;
+      restaurantId: string | null;
+      isPlatformAdmin: boolean;
     } & DefaultSession["user"];
   }
 
@@ -19,5 +21,7 @@ declare module "next-auth/jwt" {
     id: string;
     role: string;
     blocked: boolean;
+    restaurantId: string | null;
+    isPlatformAdmin: boolean;
   }
 }

@@ -1,11 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { CustomersManager } from "@/components/admin/customers-manager";
+import { requireRestaurantAdmin } from "@/lib/tenant";
 
 export const metadata = { title: "Gestão de Clientes" };
 
 export default async function AdminClientesPage() {
+  const { restaurantId } = await requireRestaurantAdmin();
   const customers = await prisma.user.findMany({
-    where: { role: "CLIENTE" },
+    where: { restaurantId, role: "CLIENTE" },
     include: { _count: { select: { orders: true, addresses: true } } },
     orderBy: { createdAt: "desc" },
   });

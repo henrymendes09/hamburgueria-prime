@@ -8,6 +8,11 @@ export default auth((req) => {
   const isAdminRoute = pathname.startsWith("/admin") && pathname !== "/admin/login";
   const isAccountRoute = pathname.startsWith("/perfil") || pathname.startsWith("/checkout");
   const isEntregadorRoute = pathname.startsWith("/entregador") && pathname !== "/entregador/login";
+  const isPlatformRoute = pathname.startsWith("/super-admin");
+
+  if (isPlatformRoute && !session?.user?.isPlatformAdmin) {
+    return NextResponse.redirect(new URL("/", req.url));
+  }
 
   if (isAdminRoute) {
     if (!session?.user || session.user.role !== "ADMIN") {
@@ -40,5 +45,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/admin/:path*", "/perfil/:path*", "/checkout/:path*", "/entregador/:path*"],
+  matcher: ["/admin/:path*", "/super-admin/:path*", "/perfil/:path*", "/checkout/:path*", "/entregador/:path*"],
 };

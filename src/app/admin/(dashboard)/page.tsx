@@ -3,43 +3,47 @@ import { formatMoney } from "@/lib/utils";
 import { DollarSign, ShoppingBag, Clock, Users, Eye, UserRoundSearch, MousePointerClick } from "lucide-react";
 import { RevenueChart } from "@/components/admin/revenue-chart";
 import { TopProductsChart } from "@/components/admin/top-products-chart";
+import { requireRestaurantAdmin } from "@/lib/tenant";
 
 export const metadata = { title: "Dashboard" };
 
 export default async function AdminDashboardPage() {
+  const { restaurantId } = await requireRestaurantAdmin();
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
   const sevenDaysAgo = new Date(startOfToday.getTime() - 7 * 24 * 60 * 60 * 1000);
 
   const [ordersToday, ordersInProgress, revenueAgg, customersCount, topProducts, last7DaysOrders, visitsToday, visitorsTodayRows, allVisitorsRows] =
     await Promise.all([
-      prisma.order.count({ where: { createdAt: { gte: startOfToday } } }),
+      prisma.order.count({ where: { restaurantId, createdAt: { gte: startOfToday } } }),
       prisma.order.count({
-        where: { status: { in: ["RECEBIDO", "ACEITO", "PREPARANDO", "SAIU_PARA_ENTREGA"] } },
+        where: { restaurantId, status: { in: ["RECEBIDO", "ACEITO", "PREPARANDO", "SAIU_PARA_ENTREGA"] } },
       }),
       prisma.order.aggregate({
-        where: { createdAt: { gte: startOfToday }, status: { not: "CANCELADO" } },
+        where: { restaurantId, createdAt: { gte: startOfToday }, status: { not: "CANCELADO" } },
         _sum: { total: true },
       }),
-      prisma.user.count({ where: { role: "CLIENTE" } }),
+      prisma.user.count({ where: { restaurantId, role: "CLIENTE" } }),
       prisma.product.findMany({
+        where: { restaurantId },
         orderBy: { soldCount: "desc" },
         take: 5,
         select: { name: true, soldCount: true },
       }),
       prisma.order.findMany({
         where: {
+          restaurantId,
           createdAt: { gte: sevenDaysAgo },
           status: { not: "CANCELADO" },
         },
         select: { createdAt: true, total: true },
       }),
-      prisma.siteVisit.count({ where: { createdAt: { gte: startOfToday } } }),
+      prisma.siteVisit.count({ where: { restaurantId, createdAt: { gte: startOfToday } } }),
       prisma.siteVisit.groupBy({
         by: ["visitorHash"],
-        where: { createdAt: { gte: startOfToday } },
+        where: { restaurantId, createdAt: { gte: startOfToday } },
       }),
-      prisma.siteVisit.groupBy({ by: ["visitorHash"] }),
+      prisma.siteVisit.groupBy({ by: ["visitorHash"], where: { restaurantId } }),
     ]);
 
   const days: { date: string; total: number }[] = [];

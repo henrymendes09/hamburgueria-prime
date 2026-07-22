@@ -8,23 +8,25 @@ import { MapSection } from "@/components/site/map-section";
 import { ProductCard } from "@/components/site/product-card";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { getPublicRestaurant } from "@/lib/tenant";
 
 export default async function HomePage() {
   const session = await auth();
+  const restaurant = await getPublicRestaurant();
 
   const [featured, coupon, reviews, favorites] = await Promise.all([
     prisma.product.findMany({
-      where: { featured: true, available: true },
+      where: { restaurantId: restaurant.id, featured: true, available: true },
       include: { addons: { include: { addon: true } }, category: true },
       take: 8,
       orderBy: { soldCount: "desc" },
     }),
     prisma.coupon.findFirst({
-      where: { active: true, expiresAt: { gt: new Date() } },
+      where: { restaurantId: restaurant.id, active: true, expiresAt: { gt: new Date() } },
       orderBy: { createdAt: "desc" },
     }),
     prisma.review.findMany({
-      where: { productId: null },
+      where: { productId: null, user: { restaurantId: restaurant.id } },
       include: { user: { select: { name: true, image: true } } },
       orderBy: { createdAt: "desc" },
       take: 6,

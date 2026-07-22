@@ -23,33 +23,127 @@ enum Role {
   ENTREGADOR
 }
 
-model User {
-  id            String    @id @default(cuid())
-  name          String
-  email         String    @unique
-  emailVerified DateTime?
-  passwordHash  String?
-  phone         String?
-  cpf           String?
-  image         String?
-  role          Role      @default(CLIENTE)
-  blocked       Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  lastAccess    DateTime  @default(now())
+enum RestaurantStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  SUSPENDED
+  CANCELED
+}
 
-  accounts      Account[]
-  sessions      Session[]
-  addresses     Address[]
-  cards         Card[]
-  orders        Order[]
-  favorites     Favorite[]
-  reviews       Review[]
-  coupons       CouponRedemption[]
-  resetTokens   PasswordResetToken[]
-  deliveries    Order[]   @relation("EntregadorOrders")
+enum SubscriptionStatus {
+  PENDING
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+model Restaurant {
+  id        String           @id @default(cuid())
+  name      String
+  slug      String           @unique
+  pixKey    String?
+  status    RestaurantStatus @default(TRIALING)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  users           User[]
+  categories      Category[]
+  addons          Addon[]
+  products        Product[]
+  coupons         Coupon[]
+  orders          Order[]
+  contactMessages ContactMessage[]
+  siteVisits      SiteVisit[]
+  subscription    Subscription?
+}
+
+model Plan {
+  id            String         @id @default(cuid())
+  name          String
+  slug          String         @unique
+  description   String?
+  monthlyPrice  Float
+  yearlyPrice   Float?
+  active        Boolean        @default(true)
+  maxProducts   Int?
+  maxUsers      Int?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id                     String             @id @default(cuid())
+  restaurantId           String             @unique
+  planId                 String
+  status                 SubscriptionStatus @default(PENDING)
+  billingCycle           BillingCycle       @default(MONTHLY)
+  provider               String             @default("MERCADO_PAGO")
+  providerSubscriptionId String?            @unique
+  checkoutUrl            String?
+  trialEndsAt            DateTime?
+  currentPeriodEnd       DateTime?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  restaurant Restaurant            @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  plan       Plan                  @relation(fields: [planId], references: [id])
+  payments   SubscriptionPayment[]
+}
+
+model SubscriptionPayment {
+  id                String       @id @default(cuid())
+  subscriptionId    String
+  providerPaymentId String?      @unique
+  status            String
+  amount            Float
+  dueDate           DateTime?
+  paidAt            DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  subscription      Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId, createdAt])
+}
+
+model User {
+  id              String    @id @default(cuid())
+  name            String
+  email           String    @unique
+  emailVerified   DateTime?
+  passwordHash    String?
+  phone           String?
+  cpf             String?
+  image           String?
+  role            Role      @default(CLIENTE)
+  restaurantId    String?
+  isPlatformAdmin Boolean   @default(false)
+  blocked         Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  lastAccess      DateTime  @default(now())
+
+  accounts    Account[]
+  sessions    Session[]
+  addresses   Address[]
+  cards       Card[]
+  orders      Order[]
+  favorites   Favorite[]
+  reviews     Review[]
+  coupons     CouponRedemption[]
+  resetTokens PasswordResetToken[]
+  deliveries  Order[]              @relation("EntregadorOrders")
+  restaurant  Restaurant?          @relation(fields: [restaurantId], references: [id])
 
   @@index([email])
+  @@index([restaurantId])
 }
 
 model Account {
@@ -143,24 +237,33 @@ model Card {
 // ------------------------------------------------------------------
 
 model Category {
-  id        String    @id @default(cuid())
-  name      String    @unique
-  slug      String    @unique
-  icon      String    @default("🍔")
-  order     Int       @default(0)
-  products  Product[]
+  id           String     @id @default(cuid())
+  restaurantId String
+  name         String
+  slug         String
+  icon         String     @default("🍔")
+  order        Int        @default(0)
+  products     Product[]
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@unique([restaurantId, name])
+  @@unique([restaurantId, slug])
 }
 
 model Addon {
-  id       String   @id @default(cuid())
-  name     String
-  price    Float    @default(0)
-  type     String   @default("EXTRA") // EXTRA | REMOVER | PONTO
-  products ProductAddon[]
+  id           String         @id @default(cuid())
+  restaurantId String
+  name         String
+  price        Float          @default(0)
+  type         String         @default("EXTRA") // EXTRA | REMOVER | PONTO
+  products     ProductAddon[]
+  restaurant   Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
 }
 
 model ProductAddon {
-  id        String  @id @default(cuid())
+  id        String @id @default(cuid())
   productId String
   addonId   String
 
@@ -171,29 +274,33 @@ model ProductAddon {
 }
 
 model Product {
-  id             String   @id @default(cuid())
-  name           String
-  slug           String   @unique
-  description    String
-  ingredients    String
-  image          String
-  price          Float
-  promoPrice     Float?
-  available      Boolean  @default(true)
-  featured       Boolean  @default(false)
-  categoryId     String
-  soldCount       Int     @default(0)
-  rating         Float    @default(4.8)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id           String   @id @default(cuid())
+  name         String
+  restaurantId String
+  slug         String
+  description  String
+  ingredients  String
+  image        String
+  price        Float
+  promoPrice   Float?
+  available    Boolean  @default(true)
+  featured     Boolean  @default(false)
+  categoryId   String
+  soldCount    Int      @default(0)
+  rating       Float    @default(4.8)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  category    Category       @relation(fields: [categoryId], references: [id])
-  addons      ProductAddon[]
-  orderItems  OrderItem[]
-  favorites   Favorite[]
-  reviews     Review[]
+  category   Category       @relation(fields: [categoryId], references: [id])
+  addons     ProductAddon[]
+  orderItems OrderItem[]
+  favorites  Favorite[]
+  reviews    Review[]
+  restaurant Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
+  @@unique([restaurantId, slug])
   @@index([categoryId])
+  @@index([restaurantId])
 }
 
 model Favorite {
@@ -230,20 +337,24 @@ enum CouponType {
 }
 
 model Coupon {
-  id           String     @id @default(cuid())
-  code         String     @unique
-  type         CouponType
-  value        Float
-  maxUses      Int?
-  usedCount    Int        @default(0)
-  singleUsePerUser Boolean @default(true)
-  minOrderValue Float     @default(0)
-  expiresAt    DateTime
-  active       Boolean    @default(true)
-  createdAt    DateTime   @default(now())
+  id               String     @id @default(cuid())
+  restaurantId     String
+  code             String
+  type             CouponType
+  value            Float
+  maxUses          Int?
+  usedCount        Int        @default(0)
+  singleUsePerUser Boolean    @default(true)
+  minOrderValue    Float      @default(0)
+  expiresAt        DateTime
+  active           Boolean    @default(true)
+  createdAt        DateTime   @default(now())
 
   redemptions CouponRedemption[]
   orders      Order[]
+  restaurant  Restaurant         @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@unique([restaurantId, code])
 }
 
 model CouponRedemption {
@@ -289,52 +400,56 @@ enum DeliveryType {
 }
 
 model Order {
-  id              String        @id @default(cuid())
-  number          Int           @unique
-  userId          String
-  addressId       String?
-  status          OrderStatus   @default(RECEBIDO)
-  deliveryType    DeliveryType  @default(ENTREGA)
-  scheduledFor    DateTime?
-  paymentMethod   PaymentMethod
-  paymentStatus   PaymentStatus @default(PENDENTE)
+  id                String        @id @default(cuid())
+  restaurantId      String
+  number            Int
+  userId            String
+  addressId         String?
+  status            OrderStatus   @default(RECEBIDO)
+  deliveryType      DeliveryType  @default(ENTREGA)
+  scheduledFor      DateTime?
+  paymentMethod     PaymentMethod
+  paymentStatus     PaymentStatus @default(PENDENTE)
   paymentExternalId String?
-  pixQrCode        String?
-  pixQrCodeBase64  String?
-  changeFor       Float?
-  subtotal        Float
-  deliveryFee     Float         @default(0)
-  discount        Float         @default(0)
-  total           Float
-  notes           String?
-  couponId        String?
-  entregadorId    String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  acceptedAt      DateTime?
-  deliveredAt     DateTime?
+  pixQrCode         String?
+  pixQrCodeBase64   String?
+  changeFor         Float?
+  subtotal          Float
+  deliveryFee       Float         @default(0)
+  discount          Float         @default(0)
+  total             Float
+  notes             String?
+  couponId          String?
+  entregadorId      String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  acceptedAt        DateTime?
+  deliveredAt       DateTime?
 
-  user       User        @relation(fields: [userId], references: [id])
-  address    Address?    @relation(fields: [addressId], references: [id])
-  coupon     Coupon?     @relation(fields: [couponId], references: [id])
-  entregador User?       @relation("EntregadorOrders", fields: [entregadorId], references: [id])
+  user       User             @relation(fields: [userId], references: [id])
+  address    Address?         @relation(fields: [addressId], references: [id])
+  coupon     Coupon?          @relation(fields: [couponId], references: [id])
+  entregador User?            @relation("EntregadorOrders", fields: [entregadorId], references: [id])
   items      OrderItem[]
   statusLog  OrderStatusLog[]
+  restaurant Restaurant       @relation(fields: [restaurantId], references: [id])
 
+  @@unique([restaurantId, number])
   @@index([userId])
   @@index([status])
+  @@index([restaurantId, createdAt])
 }
 
 model OrderItem {
-  id            String   @id @default(cuid())
-  orderId       String
-  productId     String
-  productName   String
-  quantity      Int
-  unitPrice     Float
-  addonsLabel   String?
-  removedLabel  String?
-  notes         String?
+  id           String  @id @default(cuid())
+  orderId      String
+  productId    String
+  productName  String
+  quantity     Int
+  unitPrice    Float
+  addonsLabel  String?
+  removedLabel String?
+  notes        String?
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
@@ -350,23 +465,30 @@ model OrderStatusLog {
 }
 
 model ContactMessage {
-  id        String   @id @default(cuid())
-  name      String
-  email     String
-  phone     String?
-  subject   String
-  message   String
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id           String     @id @default(cuid())
+  restaurantId String
+  name         String
+  email        String
+  phone        String?
+  subject      String
+  message      String
+  read         Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId, createdAt])
 }
 
 model SiteVisit {
-  id          String   @id @default(cuid())
-  visitorHash String
-  path        String
-  createdAt   DateTime @default(now())
+  id           String     @id @default(cuid())
+  restaurantId String
+  visitorHash  String
+  path         String
+  createdAt    DateTime   @default(now())
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   @@index([createdAt])
   @@index([visitorHash])
   @@index([path, createdAt])
+  @@index([restaurantId, createdAt])
 }

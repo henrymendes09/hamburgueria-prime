@@ -10,6 +10,7 @@ import {
   resetPasswordSchema,
 } from "@/lib/validations";
 import { headers } from "next/headers";
+import { getPublicRestaurant } from "@/lib/tenant";
 
 type ActionResult = { success: boolean; message: string };
 
@@ -49,9 +50,10 @@ export async function registerAction(
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
+  const restaurant = await getPublicRestaurant();
 
   await prisma.user.create({
-    data: { name, email, phone, passwordHash, role: "CLIENTE" },
+    data: { name, email, phone, passwordHash, role: "CLIENTE", restaurantId: restaurant.id },
   });
 
   return { success: true, message: "Conta criada com sucesso! Faça login para continuar." };

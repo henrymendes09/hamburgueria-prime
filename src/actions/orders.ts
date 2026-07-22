@@ -22,6 +22,7 @@ async function requireAdmin() {
   if (!session?.user || session.user.role !== "ADMIN") {
     throw new Error("Não autorizado.");
   }
+  if (!session.user.restaurantId) throw new Error("Empresa não identificada.");
   return session;
 }
 
@@ -29,9 +30,9 @@ export async function updateOrderStatusAction(
   orderId: string,
   newStatus: string
 ): Promise<ActionResult> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
-  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  const order = await prisma.order.findFirst({ where: { id: orderId, restaurantId: session.user.restaurantId! } });
   if (!order) return { success: false, message: "Pedido não encontrado." };
 
   const allowed = NEXT_STATUS[order.status] ?? [];
@@ -61,8 +62,11 @@ export async function assignEntregadorAction(
   orderId: string,
   entregadorId: string
 ): Promise<ActionResult> {
-  await requireAdmin();
-  await prisma.order.update({ where: { id: orderId }, data: { entregadorId } });
+  const session = await requireAdmin();
+  const restaurantId = session.user.restaurantId!;
+  const entregador = await prisma.user.findFirst({ where: { id: entregadorId, restaurantId, role: "ENTREGADOR" } });
+  if (!entregador) return { success: false, message: "Entregador não encontrado." };
+  await prisma.order.updateMany({ where: { id: orderId, restaurantId }, data: { entregadorId } });
   revalidatePath("/admin/pedidos");
   return { success: true, message: "Entregador atribuído." };
 }
@@ -76,7 +80,7 @@ export async function entregadorUpdateStatusAction(
     return { success: false, message: "Não autorizado." };
   }
   const order = await prisma.order.findFirst({
-    where: { id: orderId, entregadorId: session.user.id },
+    where: { id: orderId, entregadorId: session.user.id, restaurantId: session.user.restaurantId ?? undefined },
   });
   if (!order) return { success: false, message: "Pedido não encontrado." };
 

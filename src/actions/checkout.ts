@@ -71,6 +71,10 @@ export async function checkoutAction(
   if (!session?.user?.id) {
     return { success: false, message: "Você precisa estar logado para finalizar o pedido." };
   }
+  if (!session.user.restaurantId) {
+    return { success: false, message: "Sua conta não está vinculada a uma hamburgueria." };
+  }
+  const restaurantId = session.user.restaurantId;
 
   const h = await headers();
   const ip = h.get("x-forwarded-for") ?? "local";
@@ -91,7 +95,7 @@ export async function checkoutAction(
 
   // Revalida preços/disponibilidade no servidor (nunca confia no preço vindo do cliente)
   const productIds = items.map((i) => i.productId);
-  const dbProducts = await prisma.product.findMany({ where: { id: { in: productIds } } });
+  const dbProducts = await prisma.product.findMany({ where: { id: { in: productIds }, restaurantId } });
   const productMap = new Map(dbProducts.map((p) => [p.id, p]));
 
   for (const item of items) {
@@ -134,7 +138,7 @@ export async function checkoutAction(
   let couponId: string | undefined;
   if (data.couponCode) {
     const coupon = await prisma.coupon.findUnique({
-      where: { code: data.couponCode.trim().toUpperCase() },
+      where: { restaurantId_code: { restaurantId, code: data.couponCode.trim().toUpperCase() } },
     });
     if (
       coupon &&
@@ -169,12 +173,14 @@ export async function checkoutAction(
 
   const order = await prisma.$transaction(async (tx) => {
     const lastOrder = await tx.order.findFirst({
+      where: { restaurantId },
       orderBy: { number: "desc" },
       select: { number: true },
     });
     const nextOrderNumber = (lastOrder?.number ?? 0) + 1;
     const created = await tx.order.create({
       data: {
+        restaurantId,
         number: nextOrderNumber,
         userId: session.user.id,
         addressId,

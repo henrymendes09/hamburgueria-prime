@@ -5,6 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ProductCard } from "@/components/site/product-card";
 import { ProductCardData } from "@/types/product";
 import { MenuSearch } from "@/components/site/menu-search";
+import { getPublicRestaurant } from "@/lib/tenant";
 
 export const metadata = {
   title: "Cardápio",
@@ -18,13 +19,12 @@ export default async function CardapioPage({
 }) {
   const { categoria, busca } = await searchParams;
   const session = await auth();
+  const restaurant = await getPublicRestaurant();
 
   const [categories, products, favorites] = await Promise.all([
-    prisma.category.findMany({ orderBy: { order: "asc" } }),
+    prisma.category.findMany({ where: { restaurantId: restaurant.id }, orderBy: { order: "asc" } }),
     prisma.product.findMany({
-      where: busca
-        ? { name: { contains: busca } }
-        : undefined,
+      where: { restaurantId: restaurant.id, ...(busca ? { name: { contains: busca } } : {}) },
       include: { addons: { include: { addon: true } }, category: true },
       orderBy: { name: "asc" },
     }),

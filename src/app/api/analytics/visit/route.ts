@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_RESTAURANT_SLUG } from "@/lib/tenant";
 
 const VISITOR_ID_PATTERN = /^[0-9a-f-]{36}$/i;
 
@@ -29,7 +30,9 @@ export async function POST(req: NextRequest) {
     .update(visitorId)
     .digest("hex");
 
-  await prisma.siteVisit.create({ data: { visitorHash, path } });
+  const restaurant = await prisma.restaurant.findUnique({ where: { slug: process.env.DEFAULT_RESTAURANT_SLUG || DEFAULT_RESTAURANT_SLUG }, select: { id: true } });
+  if (!restaurant) return NextResponse.json({ ok: false }, { status: 404 });
+  await prisma.siteVisit.create({ data: { visitorHash, path, restaurantId: restaurant.id } });
 
   return NextResponse.json({ ok: true }, { status: 201 });
 }

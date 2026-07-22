@@ -9,7 +9,8 @@ type CouponResult =
 
 export async function validateCouponAction(code: string, subtotal: number): Promise<CouponResult> {
   const session = await auth();
-  const coupon = await prisma.coupon.findUnique({ where: { code: code.trim().toUpperCase() } });
+  if (!session?.user?.restaurantId) return { success: false, message: "Hamburgueria não identificada." };
+  const coupon = await prisma.coupon.findUnique({ where: { restaurantId_code: { restaurantId: session.user.restaurantId, code: code.trim().toUpperCase() } } });
 
   if (!coupon || !coupon.active) {
     return { success: false, message: "Cupom não encontrado." };

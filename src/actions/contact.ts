@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { rateLimit } from "@/lib/rate-limit";
 import { headers } from "next/headers";
+import { getPublicRestaurant } from "@/lib/tenant";
 
 const contactSchema = z.object({
   name: z.string().min(2, "Informe seu nome"),
@@ -28,7 +29,8 @@ export async function sendContactMessageAction(
     return { success: false, message: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
-  await prisma.contactMessage.create({ data: parsed.data });
+  const restaurant = await getPublicRestaurant();
+  await prisma.contactMessage.create({ data: { ...parsed.data, restaurantId: restaurant.id } });
 
   return { success: true, message: "Mensagem enviada! Responderemos em breve." };
 }

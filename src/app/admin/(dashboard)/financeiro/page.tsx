@@ -1,11 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { FinanceiroManager } from "@/components/admin/financeiro-manager";
+import { requireRestaurantAdmin } from "@/lib/tenant";
 
 export const metadata = { title: "Financeiro" };
 
 export default async function AdminFinanceiroPage() {
+  const { restaurantId } = await requireRestaurantAdmin();
   const orders = await prisma.order.findMany({
-    where: { status: { not: "CANCELADO" } },
+    where: { restaurantId, status: { not: "CANCELADO" } },
     include: { items: true, user: { select: { name: true } } },
     orderBy: { createdAt: "desc" },
     take: 200,

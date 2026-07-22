@@ -11,14 +11,16 @@ async function requireAdmin() {
   if (!session?.user || session.user.role !== "ADMIN") {
     throw new Error("Não autorizado.");
   }
+  if (!session.user.restaurantId) throw new Error("Empresa não identificada.");
+  return session.user.restaurantId;
 }
 
 export async function toggleCustomerBlockAction(
   userId: string,
   blocked: boolean
 ): Promise<ActionResult> {
-  await requireAdmin();
-  await prisma.user.update({ where: { id: userId }, data: { blocked } });
+  const restaurantId = await requireAdmin();
+  await prisma.user.updateMany({ where: { id: userId, restaurantId, role: "CLIENTE" }, data: { blocked } });
   revalidatePath("/admin/clientes");
   return { success: true, message: blocked ? "Cliente bloqueado." : "Cliente desbloqueado." };
 }
@@ -26,7 +28,7 @@ export async function toggleCustomerBlockAction(
 export async function createStaffAction(
   input: { name: string; email: string; password: string; role: "ADMIN" | "ENTREGADOR" }
 ): Promise<ActionResult> {
-  await requireAdmin();
+  const restaurantId = await requireAdmin();
   const bcrypt = await import("bcryptjs");
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
   if (existing) return { success: false, message: "Email já cadastrado." };
@@ -38,6 +40,7 @@ export async function createStaffAction(
       email: input.email,
       passwordHash,
       role: input.role,
+      restaurantId,
     },
   });
   revalidatePath("/admin/equipe");

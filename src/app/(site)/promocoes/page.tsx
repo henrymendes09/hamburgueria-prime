@@ -3,6 +3,7 @@ import { ProductCard } from "@/components/site/product-card";
 import { Tag } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { CouponCopyButton } from "@/components/site/coupon-copy-button";
+import { getPublicRestaurant } from "@/lib/tenant";
 
 export const metadata = {
   title: "Promoções",
@@ -10,13 +11,14 @@ export const metadata = {
 };
 
 export default async function PromocoesPage() {
+  const restaurant = await getPublicRestaurant();
   const [coupons, promoProducts] = await Promise.all([
     prisma.coupon.findMany({
-      where: { active: true, expiresAt: { gt: new Date() } },
+      where: { restaurantId: restaurant.id, active: true, expiresAt: { gt: new Date() } },
       orderBy: { createdAt: "desc" },
     }),
     prisma.product.findMany({
-      where: { available: true, promoPrice: { not: null } },
+      where: { restaurantId: restaurant.id, available: true, promoPrice: { not: null } },
       include: { addons: { include: { addon: true } }, category: true },
     }),
   ]);
