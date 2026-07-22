@@ -89,18 +89,19 @@ export function ProductModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <div className="relative aspect-[16/9] w-full overflow-hidden rounded-t-2xl">
+      <DialogContent className="flex max-h-[92dvh] max-w-4xl flex-col gap-0 overflow-hidden sm:w-[calc(100%-2rem)] lg:grid lg:h-[88dvh] lg:max-h-[720px] lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        <div className="relative aspect-[16/8] w-full shrink-0 overflow-hidden bg-ink lg:aspect-auto lg:h-full">
           <Image src={product.image} alt={product.name} fill className="object-cover" sizes="512px" />
         </div>
 
-        <DialogHeader>
-          <DialogTitle>{product.name}</DialogTitle>
-          <p className="text-sm text-ash mt-1">{product.description}</p>
-          <p className="text-xs text-ash-light mt-1">Ingredientes: {product.ingredients}</p>
-        </DialogHeader>
+        <div className="min-h-0 overflow-y-auto overscroll-contain">
+          <DialogHeader className="pr-14">
+            <DialogTitle>{product.name}</DialogTitle>
+            <p className="text-sm text-ash mt-1 normal-case">{product.description}</p>
+            <p className="text-xs text-ash-light mt-1 normal-case">Ingredientes: {product.ingredients}</p>
+          </DialogHeader>
 
-        <div className="px-6 pb-6 space-y-5">
+          <div className="px-6 pb-6 space-y-5">
           {pontos.length > 0 && (
             <div>
               <Label>Ponto da carne</Label>
@@ -182,7 +183,7 @@ export function ProductModal({
             />
           </div>
 
-          <div className="flex items-center justify-between pt-2">
+          <div className="sticky bottom-0 -mx-6 flex items-center justify-between gap-3 border-t border-ink/5 bg-paper/95 px-6 pb-1 pt-4 backdrop-blur-sm">
             <div className="flex items-center gap-3 rounded-full border-2 border-ink/10 px-2 py-1.5">
               <button
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
@@ -201,9 +202,10 @@ export function ProductModal({
               </button>
             </div>
 
-            <Button onClick={handleAddToCart} size="lg">
+            <Button onClick={handleAddToCart} size="lg" className="min-w-0 flex-1 sm:flex-none">
               Adicionar · {formatMoney(totalPrice)}
             </Button>
+          </div>
           </div>
         </div>
       </DialogContent>
