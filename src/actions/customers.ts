@@ -30,6 +30,22 @@ export async function createStaffAction(
 ): Promise<ActionResult> {
   const restaurantId = await requireAdmin();
   const bcrypt = await import("bcryptjs");
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { id: restaurantId },
+    select: { subscription: { select: { plan: { select: { maxUsers: true, name: true } } } } },
+  });
+  const maxUsers = restaurant?.subscription?.plan.maxUsers;
+  if (maxUsers) {
+    const currentUsers = await prisma.user.count({
+      where: { restaurantId, role: { in: ["ADMIN", "ENTREGADOR"] } },
+    });
+    if (currentUsers >= maxUsers) {
+      return {
+        success: false,
+        message: `O plano ${restaurant?.subscription?.plan.name} permite até ${maxUsers} usuários da equipe. Faça upgrade para adicionar mais.`,
+      };
+    }
+  }
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
   if (existing) return { success: false, message: "Email já cadastrado." };
 
