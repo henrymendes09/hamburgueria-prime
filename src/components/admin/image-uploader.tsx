@@ -24,6 +24,12 @@ export function ImageUploader({
       const res = await fetch("/api/upload", { method: "POST", body: formData });
       const data = await res.json();
       if (!res.ok) {
+        if (res.status === 503) {
+          const compressedImage = await compressImage(file);
+          onChange(compressedImage);
+          toast.success("Imagem preparada. Clique em Salvar configurações.");
+          return;
+        }
         toast.error(data.error || "Erro ao enviar imagem.");
         return;
       }
@@ -83,4 +89,33 @@ export function ImageUploader({
       />
     </div>
   );
+}
+
+function compressImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const image = new window.Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    image.onload = () => {
+      const maxSize = 512;
+      const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.width * scale));
+      canvas.height = Math.max(1, Math.round(image.height * scale));
+      const context = canvas.getContext("2d");
+      if (!context) {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error("Não foi possível processar a imagem."));
+        return;
+      }
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(objectUrl);
+      resolve(canvas.toDataURL("image/webp", 0.82));
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Imagem inválida."));
+    };
+    image.src = objectUrl;
+  });
 }

@@ -11,6 +11,7 @@ const settingsSchema = z.object({
   logoUrl: z.union([
     z.string().trim().url(),
     z.string().trim().startsWith("/"),
+    z.string().trim().startsWith("data:image/"),
     z.literal(""),
   ]),
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),

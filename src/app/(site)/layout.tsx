@@ -17,11 +17,15 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
   const restaurant = await getPublicRestaurant();
+  const primaryColor = /^#[0-9a-fA-F]{6}$/.test(restaurant.primaryColor)
+    ? restaurant.primaryColor
+    : "#e01b22";
 
   return (
     <div className="flex min-h-screen flex-col">
+      <style>{`:root{--color-flame:${primaryColor};--color-flame-dark:color-mix(in srgb,${primaryColor} 72%,black);--color-flame-light:color-mix(in srgb,${primaryColor} 72%,white)}`}</style>
       <AnalyticsTracker />
-      <Header restaurantName={restaurant.name} restaurantSlug={restaurant.slug} logoUrl={restaurant.logoUrl} primaryColor={restaurant.primaryColor} />
+      <Header restaurantName={restaurant.name} restaurantSlug={restaurant.slug} logoUrl={restaurant.logoUrl} primaryColor={primaryColor} />
       <CartDrawer />
       <main className="flex-1">{children}</main>
       <Footer restaurant={restaurant} />
