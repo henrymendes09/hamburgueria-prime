@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { getPublicRestaurant } from "@/lib/tenant";
 
 type CouponResult =
   | { success: true; coupon: { code: string; type: "PERCENTUAL" | "VALOR"; value: number } }
@@ -9,8 +10,9 @@ type CouponResult =
 
 export async function validateCouponAction(code: string, subtotal: number): Promise<CouponResult> {
   const session = await auth();
-  if (!session?.user?.restaurantId) return { success: false, message: "Hamburgueria não identificada." };
-  const coupon = await prisma.coupon.findUnique({ where: { restaurantId_code: { restaurantId: session.user.restaurantId, code: code.trim().toUpperCase() } } });
+  const restaurant = await getPublicRestaurant();
+  if (!session?.user?.restaurantId || session.user.restaurantId !== restaurant.id) return { success: false, message: "Entre com uma conta desta hamburgueria." };
+  const coupon = await prisma.coupon.findUnique({ where: { restaurantId_code: { restaurantId: restaurant.id, code: code.trim().toUpperCase() } } });
 
   if (!coupon || !coupon.active) {
     return { success: false, message: "Cupom não encontrado." };

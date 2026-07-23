@@ -85,6 +85,7 @@ export function OrdersBoard({
 
   useEffect(() => {
     const source = new EventSource("/api/admin/orders/events");
+    const polling = window.setInterval(refresh, 15000);
 
     source.onmessage = (event) => {
       const payload = JSON.parse(event.data);
@@ -101,7 +102,10 @@ export function OrdersBoard({
       // O EventSource tenta reconectar automaticamente
     };
 
-    return () => source.close();
+    return () => {
+      source.close();
+      window.clearInterval(polling);
+    };
   }, [refresh]);
 
   async function handleStatusChange(orderId: string, next: string) {

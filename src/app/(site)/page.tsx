@@ -96,7 +96,7 @@ export default async function HomePage() {
       </div>
 
       <Testimonials reviews={reviews} />
-      <MapSection />
+      <MapSection name={restaurant.name} address={restaurant.address} phone={restaurant.phone} businessHours={restaurant.businessHours} primaryColor={restaurant.primaryColor} />
     </>
   );
 }

@@ -28,7 +28,7 @@ export async function createRestaurantAction(formData: FormData) {
   const passwordHash = await bcrypt.hash(password, 10);
   const trialEndsAt = new Date(Date.now() + 14 * 86400000);
   const result = await prisma.$transaction(async (tx) => {
-    const restaurant = await tx.restaurant.create({ data: { name, slug, status: "TRIALING" } });
+    const restaurant = await tx.restaurant.create({ data: { name, slug, email, phone, status: "TRIALING" } });
     await tx.user.create({ data: { name: ownerName, email, phone, passwordHash, role: "ADMIN", restaurantId: restaurant.id } });
     const subscription = await tx.subscription.create({ data: { restaurantId: restaurant.id, planId, billingCycle, status: "TRIALING", trialEndsAt } });
     return { restaurant, subscription };

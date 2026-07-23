@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { reviewSchema } from "@/lib/validations";
+import { getPublicRestaurant } from "@/lib/tenant";
 
 type ActionResult = { success: boolean; message: string; favorited?: boolean };
 
@@ -11,6 +12,10 @@ export async function toggleFavoriteAction(productId: string): Promise<ActionRes
   const session = await auth();
   if (!session?.user) return { success: false, message: "Faça login para favoritar produtos." };
 
+  const restaurant = await getPublicRestaurant();
+  if (session.user.restaurantId !== restaurant.id) return { success: false, message: "Entre com uma conta desta hamburgueria." };
+  const product = await prisma.product.findFirst({ where: { id: productId, restaurantId: restaurant.id }, select: { id: true } });
+  if (!product) return { success: false, message: "Produto não encontrado." };
   const existing = await prisma.favorite.findUnique({
     where: { userId_productId: { userId: session.user.id, productId } },
   });
@@ -32,9 +37,15 @@ export async function createReviewAction(input: unknown): Promise<ActionResult> 
   const session = await auth();
   if (!session?.user) return { success: false, message: "Faça login para avaliar." };
 
+  const restaurant = await getPublicRestaurant();
+  if (session.user.restaurantId !== restaurant.id) return { success: false, message: "Entre com uma conta desta hamburgueria." };
   const parsed = reviewSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, message: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  if (parsed.data.productId) {
+    const product = await prisma.product.findFirst({ where: { id: parsed.data.productId, restaurantId: restaurant.id }, select: { id: true } });
+    if (!product) return { success: false, message: "Produto não encontrado." };
   }
 
   await prisma.review.create({

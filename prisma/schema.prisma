@@ -45,13 +45,25 @@ enum BillingCycle {
 }
 
 model Restaurant {
-  id        String           @id @default(cuid())
-  name      String
-  slug      String           @unique
-  pixKey    String?
-  status    RestaurantStatus @default(TRIALING)
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  id                    String           @id @default(cuid())
+  name                  String
+  slug                  String           @unique
+  customDomain          String?          @unique
+  logoUrl               String?
+  primaryColor          String           @default("#ed1c24")
+  description           String?
+  phone                 String?
+  whatsapp              String?
+  email                 String?
+  cnpj                  String?
+  address               String?
+  businessHours         String?
+  deliveryFee           Float            @default(0)
+  freeDeliveryThreshold Float?
+  pixKey                String?
+  status                RestaurantStatus @default(TRIALING)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
 
   users           User[]
   categories      Category[]

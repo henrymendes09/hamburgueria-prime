@@ -1,12 +1,20 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { resolveTenantSlug } from "@/lib/tenant-security";
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
   const session = req.auth;
   const requestHeaders = new Headers(req.headers);
   const requestedRestaurant = req.nextUrl.searchParams.get("loja");
-  const rootRestaurant = requestedRestaurant || "hamburgueria-prime";
+  const rootRestaurant = resolveTenantSlug({
+    pathname,
+    querySlug: requestedRestaurant,
+    cookieSlug: req.cookies.get("hp_restaurant")?.value,
+    host: req.headers.get("host"),
+    rootDomain: process.env.PLATFORM_ROOT_DOMAIN,
+    defaultSlug: "hamburgueria-prime",
+  });
   if (pathname === "/") requestHeaders.set("x-restaurant-slug", rootRestaurant);
 
   const isAdminRoute = pathname.startsWith("/admin") && pathname !== "/admin/login";

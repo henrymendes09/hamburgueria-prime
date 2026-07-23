@@ -11,6 +11,7 @@ import {
   Users,
   BarChart3,
   UserCog,
+  Settings,
   LogOut,
   ExternalLink,
 } from "lucide-react";
@@ -24,6 +25,7 @@ const LINKS = [
   { href: "/admin/clientes", label: "Clientes", icon: Users },
   { href: "/admin/financeiro", label: "Financeiro", icon: BarChart3 },
   { href: "/admin/equipe", label: "Equipe", icon: UserCog },
+  { href: "/admin/configuracoes", label: "Configurações", icon: Settings },
 ];
 
 export function AdminSidebar({ userName, restaurantSlug }: { userName: string; restaurantSlug?: string }) {

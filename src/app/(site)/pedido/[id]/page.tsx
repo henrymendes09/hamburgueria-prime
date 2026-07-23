@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+/* eslint-disable @next/next/no-img-element */
 import { auth } from "@/lib/auth";
 import { notFound, redirect } from "next/navigation";
 import { OrderTracking } from "@/components/site/order-tracking";

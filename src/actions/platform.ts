@@ -1,0 +1,25 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { prisma } from "@/lib/prisma";
+import { requirePlatformAdmin } from "@/lib/tenant";
+
+export async function setRestaurantStatusAction(formData: FormData) {
+  await requirePlatformAdmin();
+  const id = String(formData.get("id") || "");
+  const status = String(formData.get("status") || "");
+  if (!id || !["ACTIVE", "SUSPENDED"].includes(status)) return;
+  await prisma.restaurant.update({ where: { id }, data: { status: status as "ACTIVE" | "SUSPENDED" } });
+  revalidatePath("/super-admin");
+}
+
+export async function updatePlanAction(formData: FormData) {
+  await requirePlatformAdmin();
+  const id = String(formData.get("id") || "");
+  const monthlyPrice = Number(formData.get("monthlyPrice"));
+  const rawMaxUsers = String(formData.get("maxUsers") || "");
+  if (!id || !Number.isFinite(monthlyPrice) || monthlyPrice <= 0) return;
+  await prisma.plan.update({ where: { id }, data: { monthlyPrice, maxUsers: rawMaxUsers ? Number(rawMaxUsers) : null } });
+  revalidatePath("/super-admin");
+  revalidatePath("/comece");
+}

@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
-import { checkoutSchema, DELIVERY_FEE, FREE_DELIVERY_THRESHOLD } from "@/lib/validations";
+import { checkoutSchema } from "@/lib/validations";
 import { CartItem } from "@/types/cart";
 import { headers } from "next/headers";
 import { emitOrderEvent } from "@/lib/order-events";
@@ -131,9 +131,9 @@ export async function checkoutAction(
   const deliveryFee =
     data.deliveryType === "RETIRADA"
       ? 0
-      : subtotal >= FREE_DELIVERY_THRESHOLD
+      : activeRestaurant.freeDeliveryThreshold && subtotal >= activeRestaurant.freeDeliveryThreshold
       ? 0
-      : DELIVERY_FEE;
+      : activeRestaurant.deliveryFee;
 
   // Cupom
   let discount = 0;

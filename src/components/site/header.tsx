@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -25,7 +26,7 @@ const NAV_LINKS = [
   { href: "/contato", label: "Contato" },
 ];
 
-export function Header({ restaurantName, restaurantSlug }: { restaurantName: string; restaurantSlug: string }) {
+export function Header({ restaurantName, restaurantSlug, logoUrl, primaryColor }: { restaurantName: string; restaurantSlug: string; logoUrl?: string | null; primaryColor: string }) {
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const items = useCartStore((s) => s.items);
@@ -71,11 +72,11 @@ export function Header({ restaurantName, restaurantSlug }: { restaurantName: str
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <Link href={`/?loja=${encodeURIComponent(restaurantSlug)}`} className="flex items-center gap-2 shrink-0">
-          <div className="stamp flex h-11 w-11 items-center justify-center rounded-full bg-flame text-paper font-display text-xl">
-            {initials || "HP"}
+          <div className="stamp flex h-11 w-11 items-center justify-center overflow-hidden rounded-full text-paper font-display text-xl" style={{ backgroundColor: primaryColor }}>
+            {logoUrl ? <img src={logoUrl} alt={`Logo ${restaurantName}`} className="h-full w-full object-cover" /> : initials || "HP"}
           </div>
           <span className="font-display text-xl text-paper hidden sm:block">
-            {mainName || restaurantName}{highlightedName && <> <span className="text-flame">{highlightedName}</span></>}
+            {mainName || restaurantName}{highlightedName && <> <span style={{ color: primaryColor }}>{highlightedName}</span></>}
           </span>
         </Link>
 
@@ -141,7 +142,8 @@ export function Header({ restaurantName, restaurantSlug }: { restaurantName: str
 
           <button
             onClick={openCart}
-            className="relative flex h-10 w-10 items-center justify-center rounded-full bg-flame text-white hover:brightness-105 transition-all"
+            className="relative flex h-10 w-10 items-center justify-center rounded-full text-white hover:brightness-105 transition-all"
+            style={{ backgroundColor: primaryColor }}
             aria-label="Abrir carrinho"
           >
             <ShoppingBag className="h-5 w-5" />
