@@ -25,7 +25,7 @@ const NAV_LINKS = [
   { href: "/contato", label: "Contato" },
 ];
 
-export function Header() {
+export function Header({ restaurantName }: { restaurantName: string }) {
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const items = useCartStore((s) => s.items);
@@ -35,6 +35,16 @@ export function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
+  const nameParts = restaurantName.trim().split(/\s+/);
+  const highlightedName = nameParts.length > 1 ? nameParts.pop() : null;
+  const mainName = nameParts.join(" ");
+  const initials = restaurantName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -62,10 +72,10 @@ export function Header() {
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <div className="stamp flex h-11 w-11 items-center justify-center rounded-full bg-flame text-paper font-display text-xl">
-            HP
+            {initials || "HP"}
           </div>
           <span className="font-display text-xl text-paper hidden sm:block">
-            Hamburgueria <span className="text-flame">Prime</span>
+            {mainName || restaurantName}{highlightedName && <> <span className="text-flame">{highlightedName}</span></>}
           </span>
         </Link>
 
