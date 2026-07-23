@@ -10,7 +10,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
   });
   if (!restaurant) return new NextResponse("Hamburgueria não encontrada ou indisponível.", { status: 404 });
 
-  const response = NextResponse.redirect(new URL("/", request.url));
+  const destination = new URL("/", request.url);
+  destination.searchParams.set("loja", restaurant.slug);
+  const response = NextResponse.redirect(destination);
   response.cookies.set(RESTAURANT_COOKIE, restaurant.slug, {
     httpOnly: true,
     sameSite: "lax",

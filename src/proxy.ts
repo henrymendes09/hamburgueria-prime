@@ -4,6 +4,10 @@ import { auth } from "@/lib/auth";
 export default auth((req) => {
   const { pathname } = req.nextUrl;
   const session = req.auth;
+  const requestHeaders = new Headers(req.headers);
+  const requestedRestaurant = req.nextUrl.searchParams.get("loja");
+  const rootRestaurant = requestedRestaurant || "hamburgueria-prime";
+  if (pathname === "/") requestHeaders.set("x-restaurant-slug", rootRestaurant);
 
   const isAdminRoute = pathname.startsWith("/admin") && pathname !== "/admin/login";
   const isAccountRoute = pathname.startsWith("/perfil") || pathname.startsWith("/checkout");
@@ -41,9 +45,19 @@ export default auth((req) => {
     }
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  if (pathname === "/") {
+    response.cookies.set("hp_restaurant", rootRestaurant, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+    });
+  }
+  return response;
 });
 
 export const config = {
-  matcher: ["/admin/:path*", "/super-admin/:path*", "/perfil/:path*", "/checkout/:path*", "/entregador/:path*"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)"],
 };

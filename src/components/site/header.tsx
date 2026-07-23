@@ -25,7 +25,7 @@ const NAV_LINKS = [
   { href: "/contato", label: "Contato" },
 ];
 
-export function Header({ restaurantName }: { restaurantName: string }) {
+export function Header({ restaurantName, restaurantSlug }: { restaurantName: string; restaurantSlug: string }) {
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const items = useCartStore((s) => s.items);
@@ -70,7 +70,7 @@ export function Header({ restaurantName }: { restaurantName: string }) {
       )}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-        <Link href="/" className="flex items-center gap-2 shrink-0">
+        <Link href={`/?loja=${encodeURIComponent(restaurantSlug)}`} className="flex items-center gap-2 shrink-0">
           <div className="stamp flex h-11 w-11 items-center justify-center rounded-full bg-flame text-paper font-display text-xl">
             {initials || "HP"}
           </div>
@@ -83,7 +83,7 @@ export function Header({ restaurantName }: { restaurantName: string }) {
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
-              href={link.href}
+              href={link.href === "/" ? `/?loja=${encodeURIComponent(restaurantSlug)}` : link.href}
               className={cn(
                 "px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wide text-paper/70 hover:text-paper hover:bg-white/5 transition-colors",
                 pathname === link.href && "text-flame"
@@ -167,7 +167,7 @@ export function Header({ restaurantName }: { restaurantName: string }) {
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
-              href={link.href}
+              href={link.href === "/" ? `/?loja=${encodeURIComponent(restaurantSlug)}` : link.href}
               onClick={() => setMobileOpen(false)}
               className="px-4 py-3 rounded-lg text-sm font-bold uppercase tracking-wide text-paper/80 hover:bg-white/5"
             >

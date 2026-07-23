@@ -10,7 +10,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   return (
     <div className="flex min-h-screen flex-col">
       <AnalyticsTracker />
-      <Header restaurantName={restaurant.name} />
+      <Header restaurantName={restaurant.name} restaurantSlug={restaurant.slug} />
       <CartDrawer />
       <main className="flex-1">{children}</main>
       <Footer />
