@@ -10,7 +10,6 @@ export default async function ComecePage({ searchParams }: { searchParams: Promi
     searchParams,
     prisma.plan.findMany({
       where: { active: true },
-      include: { _count: { select: { subscriptions: true } } },
       orderBy: { monthlyPrice: "asc" },
     }),
   ]);
@@ -20,8 +19,7 @@ export default async function ComecePage({ searchParams }: { searchParams: Promi
     description: plan.description,
     maxUsers: plan.maxUsers,
     features: plan.features,
-    regularMonthlyPrice: plan.monthlyPrice,
-    ...planPricing(plan, plan._count.subscriptions),
+    ...planPricing(plan),
   }));
 
   return <main className="min-h-screen bg-[#f6f2ea] px-5 py-12 text-zinc-950">

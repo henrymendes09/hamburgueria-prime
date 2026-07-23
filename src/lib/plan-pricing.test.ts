@@ -9,17 +9,8 @@ const plan = {
 };
 
 describe("planPricing", () => {
-  it("aplica o lançamento enquanto houver vagas", () => {
-    expect(planPricing(plan, 3)).toMatchObject({
-      monthly: 79.9,
-      yearly: 799,
-      launchAvailable: true,
-      remainingLaunchSlots: 17,
-    });
-  });
-
-  it("usa o preço regular depois das vagas", () => {
-    expect(planPricing(plan, 20)).toMatchObject({
+  it("usa o preço padrão mesmo quando existirem dados promocionais antigos", () => {
+    expect(planPricing(plan)).toMatchObject({
       monthly: 99.9,
       yearly: 999,
       launchAvailable: false,
@@ -27,7 +18,7 @@ describe("planPricing", () => {
   });
 
   it("cobra dez mensalidades no plano anual", () => {
-    const pricing = planPricing({ ...plan, launchMonthlyPrice: null }, 0);
+    const pricing = planPricing(plan);
     expect(pricing.yearly).toBe(pricing.monthly * 10);
   });
 });

@@ -12,9 +12,6 @@ type PlanOption = {
   monthly: number;
   yearly: number;
   monthlyEquivalentOnYearly: number;
-  launchAvailable: boolean;
-  remainingLaunchSlots: number;
-  regularMonthlyPrice: number;
 };
 
 const money = (value: number) =>
@@ -43,17 +40,14 @@ export function PlanSelector({ plans }: { plans: PlanOption[] }) {
           return (
             <label key={plan.id} className="relative cursor-pointer rounded-2xl border-2 border-zinc-200 p-5 has-[:checked]:border-red-600 has-[:checked]:bg-red-50">
               <input type="radio" name="planId" value={plan.id} required defaultChecked={index === 0} className="absolute right-4 top-4 accent-red-600" />
-              {plan.launchAvailable && <span className="mb-3 inline-block rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-800">PREÇO DE LANÇAMENTO</span>}
               <strong className="block text-xl">{plan.name}</strong>
               {plan.description && <p className="mt-1 min-h-10 text-sm text-zinc-500">{plan.description}</p>}
-              {plan.launchAvailable && <span className="mt-3 block text-sm text-zinc-400 line-through">{money(plan.regularMonthlyPrice)}/mês</span>}
-              <span className="mt-1 block text-3xl font-black">{money(displayedPrice)}</span>
+              <span className="mt-4 block text-3xl font-black">{money(displayedPrice)}</span>
               <span className="text-sm text-zinc-500">por mês{billingCycle === "YEARLY" ? ` · ${money(plan.yearly)} ao ano` : ""}</span>
               <p className="mt-4 text-sm font-bold">{plan.maxUsers ? `Até ${plan.maxUsers} usuários da equipe` : "Usuários ilimitados"}</p>
               <ul className="mt-4 space-y-2 text-sm text-zinc-700">
                 {plan.features.map((feature) => <li key={feature} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />{feature}</li>)}
               </ul>
-              {plan.launchAvailable && <p className="mt-4 text-xs font-semibold text-amber-700">Restam {plan.remainingLaunchSlots} vagas promocionais</p>}
             </label>
           );
         })}

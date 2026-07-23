@@ -20,10 +20,7 @@ export async function createRestaurantAction(formData: FormData) {
   const billingCycle = formData.get("billingCycle") === "YEARLY" ? "YEARLY" : "MONTHLY";
   if (name.length < 3 || ownerName.length < 3 || !email.includes("@") || password.length < 8) redirect("/comece?erro=dados");
   if (await prisma.user.findUnique({ where: { email } })) redirect("/comece?erro=email");
-  const plan = await prisma.plan.findFirst({
-    where: { id: planId, active: true },
-    include: { _count: { select: { subscriptions: true } } },
-  });
+  const plan = await prisma.plan.findFirst({ where: { id: planId, active: true } });
   if (!plan) redirect("/comece?erro=plano");
 
   const baseSlug = slugify(name) || "hamburgueria";
@@ -38,7 +35,7 @@ export async function createRestaurantAction(formData: FormData) {
     return { restaurant, subscription };
   });
 
-  const pricing = planPricing(plan, plan._count.subscriptions);
+  const pricing = planPricing(plan);
   const amount = billingCycle === "YEARLY" ? pricing.yearly : pricing.monthly;
   try {
     const checkout = await createMercadoPagoSubscription({ subscriptionId: result.subscription.id, restaurantName: name, payerEmail: email, amount, cycle: billingCycle });

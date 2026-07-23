@@ -27,8 +27,6 @@ export default async function SuperAdminPage() {
             <input type="hidden" name="id" value={plan.id} /><b>{plan.name}</b>
             <PlanField label="Preço mensal" name="monthlyPrice" value={plan.monthlyPrice} />
             <PlanField label="Preço anual" name="yearlyPrice" value={plan.yearlyPrice ?? plan.monthlyPrice * 10} />
-            <PlanField label="Mensalidade de lançamento" name="launchMonthlyPrice" value={plan.launchMonthlyPrice ?? ""} />
-            <PlanField label="Vagas promocionais" name="launchSlots" value={plan.launchSlots ?? ""} step="1" />
             <PlanField label="Limite de usuários (vazio = ilimitado)" name="maxUsers" value={plan.maxUsers ?? ""} step="1" />
             <label className="mt-3 block text-xs text-zinc-400">Funcionalidades (uma por linha)<textarea name="features" defaultValue={plan.features.join("\n")} className="mt-1 min-h-36 w-full rounded-lg bg-zinc-800 p-2 text-white" /></label>
             <small className="mt-3 block">{plan._count.subscriptions} assinatura(s)</small>

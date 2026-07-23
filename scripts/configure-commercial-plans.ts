@@ -8,8 +8,8 @@ const commercialPlans = [
     description: "Para começar a vender diretamente aos seus clientes.",
     monthlyPrice: 99.9,
     yearlyPrice: 999,
-    launchMonthlyPrice: 79.9,
-    launchSlots: 20,
+    launchMonthlyPrice: null,
+    launchSlots: null,
     maxUsers: 3,
     features: [
       "Loja online personalizada",
@@ -23,8 +23,8 @@ const commercialPlans = [
     description: "Para operações em crescimento que precisam de mais controle.",
     monthlyPrice: 179.9,
     yearlyPrice: 1799,
-    launchMonthlyPrice: 149.9,
-    launchSlots: 20,
+    launchMonthlyPrice: null,
+    launchSlots: null,
     maxUsers: 10,
     features: [
       "Tudo do Plano Básico",
@@ -39,8 +39,8 @@ const commercialPlans = [
     description: "Para hamburguerias com equipes e operação maiores.",
     monthlyPrice: 299.9,
     yearlyPrice: 2999,
-    launchMonthlyPrice: 249.9,
-    launchSlots: 20,
+    launchMonthlyPrice: null,
+    launchSlots: null,
     maxUsers: null,
     features: [
       "Tudo do Plano Profissional",
@@ -62,7 +62,7 @@ async function main() {
     await prisma.plan.update({ where: { id: plan.id }, data: commercialPlans[index] });
   }
 
-  console.log("Planos comerciais atualizados com preços mensal, anual e de lançamento.");
+  console.log("Planos comerciais atualizados com preços mensal e anual.");
 }
 
 main().finally(() => prisma.$disconnect());
