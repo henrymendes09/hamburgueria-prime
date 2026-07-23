@@ -8,7 +8,11 @@ import { requireRestaurantAdmin } from "@/lib/tenant";
 
 const settingsSchema = z.object({
   name: z.string().trim().min(3).max(80),
-  logoUrl: z.string().trim().url().or(z.literal("")),
+  logoUrl: z.union([
+    z.string().trim().url(),
+    z.string().trim().startsWith("/"),
+    z.literal(""),
+  ]),
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   description: z.string().trim().max(300),
   phone: z.string().trim().max(30),
