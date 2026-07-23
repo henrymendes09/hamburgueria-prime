@@ -10,7 +10,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const { id } = await params;
   const order = await prisma.order.findFirst({
-    where: { id, userId: session.user.id },
+    where: { id, userId: session.user.id, restaurantId: session.user.restaurantId ?? undefined },
     select: {
       id: true,
       status: true,

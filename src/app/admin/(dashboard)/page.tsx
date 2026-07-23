@@ -4,11 +4,16 @@ import { DollarSign, ShoppingBag, Clock, Users, Eye, UserRoundSearch, MousePoint
 import { RevenueChart } from "@/components/admin/revenue-chart";
 import { TopProductsChart } from "@/components/admin/top-products-chart";
 import { requireRestaurantAdmin } from "@/lib/tenant";
+import Link from "next/link";
 
 export const metadata = { title: "Dashboard" };
 
 export default async function AdminDashboardPage() {
   const { restaurantId } = await requireRestaurantAdmin();
+  const restaurant = await prisma.restaurant.findUniqueOrThrow({
+    where: { id: restaurantId },
+    select: { name: true, slug: true },
+  });
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
   const sevenDaysAgo = new Date(startOfToday.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -76,7 +81,10 @@ export default async function AdminDashboardPage() {
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-3xl text-ink">Dashboard</h1>
-        <p className="text-ash normal-case mt-1">Visão geral da Hamburgueria Prime</p>
+        <p className="text-ash normal-case mt-1">Visão geral da {restaurant.name}</p>
+        <Link href={`/loja/${restaurant.slug}`} target="_blank" className="mt-3 inline-block rounded-full bg-ink px-4 py-2 text-xs font-bold uppercase text-white">
+          Abrir link público da loja
+        </Link>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">

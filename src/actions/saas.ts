@@ -39,7 +39,6 @@ export async function createRestaurantAction(formData: FormData) {
     const checkout = await createMercadoPagoSubscription({ subscriptionId: result.subscription.id, restaurantName: name, payerEmail: email, amount, cycle: billingCycle });
     if (checkout) {
       await prisma.subscription.update({ where: { id: result.subscription.id }, data: { providerSubscriptionId: checkout.id, checkoutUrl: checkout.init_point } });
-      redirect(checkout.init_point);
     }
   } catch (error) {
     console.error("Falha ao iniciar assinatura", error);

@@ -10,7 +10,7 @@ export default async function EntregadorPage() {
   const session = await auth();
 
   const orders = await prisma.order.findMany({
-    where: { entregadorId: session!.user.id, status: { in: ["PREPARANDO", "SAIU_PARA_ENTREGA"] } },
+    where: { entregadorId: session!.user.id, restaurantId: session!.user.restaurantId ?? undefined, status: { in: ["PREPARANDO", "SAIU_PARA_ENTREGA"] } },
     include: { items: true, user: { select: { name: true, phone: true } }, address: true },
     orderBy: { createdAt: "asc" },
   });

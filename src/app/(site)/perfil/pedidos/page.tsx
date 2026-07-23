@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { formatMoney, formatDateTime, ORDER_STATUS_LABEL } from "@/lib/utils";
 import { Package } from "lucide-react";
+import { getPublicRestaurant } from "@/lib/tenant";
 
 export const metadata = { title: "Meus pedidos" };
 
@@ -19,8 +20,9 @@ const STATUS_VARIANT: Record<string, "default" | "success" | "muted" | "dark"> =
 
 export default async function PedidosPage() {
   const session = await auth();
+  const restaurant = await getPublicRestaurant();
   const orders = await prisma.order.findMany({
-    where: { userId: session!.user.id },
+    where: { userId: session!.user.id, restaurantId: restaurant.id },
     include: { items: true },
     orderBy: { createdAt: "desc" },
   });

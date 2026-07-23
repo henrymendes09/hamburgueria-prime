@@ -20,6 +20,7 @@ if (process.env.NODE_ENV !== "production") {
 
 export type OrderEventPayload = {
   type: "new-order" | "status-update";
+  restaurantId: string;
   orderId: string;
   orderNumber?: number;
   status?: string;

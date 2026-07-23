@@ -8,6 +8,7 @@ import { CartItem } from "@/types/cart";
 import { headers } from "next/headers";
 import { emitOrderEvent } from "@/lib/order-events";
 import crypto from "crypto";
+import { getPublicRestaurant } from "@/lib/tenant";
 
 type CheckoutResult =
   | { success: true; orderId: string; orderNumber: number }
@@ -71,10 +72,11 @@ export async function checkoutAction(
   if (!session?.user?.id) {
     return { success: false, message: "Você precisa estar logado para finalizar o pedido." };
   }
-  if (!session.user.restaurantId) {
+  const activeRestaurant = await getPublicRestaurant();
+  if (!session.user.restaurantId || session.user.restaurantId !== activeRestaurant.id) {
     return { success: false, message: "Sua conta não está vinculada a uma hamburgueria." };
   }
-  const restaurantId = session.user.restaurantId;
+  const restaurantId = activeRestaurant.id;
 
   const h = await headers();
   const ip = h.get("x-forwarded-for") ?? "local";
@@ -235,7 +237,7 @@ export async function checkoutAction(
     return created;
   });
 
-  emitOrderEvent({ type: "new-order", orderId: order.id, orderNumber: order.number });
+  emitOrderEvent({ type: "new-order", restaurantId, orderId: order.id, orderNumber: order.number });
 
   return { success: true, orderId: order.id, orderNumber: order.number };
 }

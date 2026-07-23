@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { notFound, redirect } from "next/navigation";
 import { OrderTracking } from "@/components/site/order-tracking";
 import { formatMoney, ORDER_STATUS_LABEL, PAYMENT_LABEL } from "@/lib/utils";
+import { getPublicRestaurant } from "@/lib/tenant";
 
 export const metadata = { title: "Acompanhar pedido" };
 
@@ -11,8 +12,9 @@ export default async function PedidoPage({ params }: { params: Promise<{ id: str
   const session = await auth();
   if (!session?.user) redirect(`/login?callbackUrl=/pedido/${id}`);
 
+  const restaurant = await getPublicRestaurant();
   const order = await prisma.order.findFirst({
-    where: { id, userId: session.user.id },
+    where: { id, userId: session.user.id, restaurantId: restaurant.id },
     include: {
       items: true,
       address: true,

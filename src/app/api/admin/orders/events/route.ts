@@ -16,7 +16,9 @@ export async function GET(req: NextRequest) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
       };
 
-      const listener = (payload: OrderEventPayload) => send(payload);
+      const listener = (payload: OrderEventPayload) => {
+        if (payload.restaurantId === session.user.restaurantId) send(payload);
+      };
       orderEvents.on("order-event", listener);
 
       // Heartbeat para manter a conexão viva atrás de proxies/load balancers

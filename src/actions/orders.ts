@@ -52,7 +52,7 @@ export async function updateOrderStatusAction(
     },
   });
 
-  emitOrderEvent({ type: "status-update", orderId, status: newStatus });
+  emitOrderEvent({ type: "status-update", restaurantId: order.restaurantId, orderId, status: newStatus });
   revalidatePath("/admin/pedidos");
   revalidatePath(`/pedido/${orderId}`);
   return { success: true, message: "Status atualizado." };
