@@ -77,18 +77,21 @@ model Restaurant {
 }
 
 model Plan {
-  id            String         @id @default(cuid())
-  name          String
-  slug          String         @unique
-  description   String?
-  monthlyPrice  Float
-  yearlyPrice   Float?
-  active        Boolean        @default(true)
-  maxProducts   Int?
-  maxUsers      Int?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  subscriptions Subscription[]
+  id                 String         @id @default(cuid())
+  name               String
+  slug               String         @unique
+  description        String?
+  monthlyPrice       Float
+  yearlyPrice        Float?
+  launchMonthlyPrice Float?
+  launchSlots        Int?
+  features           String[]       @default([])
+  active             Boolean        @default(true)
+  maxProducts        Int?
+  maxUsers           Int?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  subscriptions      Subscription[]
 }
 
 model Subscription {

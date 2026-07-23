@@ -1,13 +1,28 @@
 import { createRestaurantAction } from "@/actions/saas";
+import { PlanSelector } from "@/components/platform/plan-selector";
 import { prisma } from "@/lib/prisma";
+import { planPricing } from "@/lib/plan-pricing";
 
 export const dynamic = "force-dynamic";
 
 export default async function ComecePage({ searchParams }: { searchParams: Promise<{ erro?: string }> }) {
   const [{ erro }, plans] = await Promise.all([
     searchParams,
-    prisma.plan.findMany({ where: { active: true }, orderBy: { monthlyPrice: "asc" } }),
+    prisma.plan.findMany({
+      where: { active: true },
+      include: { _count: { select: { subscriptions: true } } },
+      orderBy: { monthlyPrice: "asc" },
+    }),
   ]);
+  const planOptions = plans.map((plan) => ({
+    id: plan.id,
+    name: plan.name,
+    description: plan.description,
+    maxUsers: plan.maxUsers,
+    features: plan.features,
+    regularMonthlyPrice: plan.monthlyPrice,
+    ...planPricing(plan, plan._count.subscriptions),
+  }));
 
   return <main className="min-h-screen bg-[#f6f2ea] px-5 py-12 text-zinc-950">
     <div className="mx-auto max-w-5xl">
@@ -23,21 +38,7 @@ export default async function ComecePage({ searchParams }: { searchParams: Promi
           <label className="grid gap-2 font-semibold">Telefone<input required name="phone" className="rounded-xl border p-3 font-normal" /></label>
         </div>
         <label className="grid gap-2 font-semibold">Senha<input required minLength={8} type="password" name="password" className="rounded-xl border p-3 font-normal" /></label>
-        <fieldset>
-          <legend className="font-semibold">Escolha seu plano</legend>
-          <div className="mt-3 grid gap-4 md:grid-cols-3">
-            {plans.map((plan, index) => (
-              <label key={plan.id} className="relative cursor-pointer rounded-2xl border-2 border-zinc-200 p-5 has-[:checked]:border-red-600 has-[:checked]:bg-red-50">
-                <input type="radio" name="planId" value={plan.id} required defaultChecked={index === 0} className="absolute right-4 top-4 accent-red-600" />
-                <strong className="block text-xl">{plan.name}</strong>
-                <span className="mt-3 block text-3xl font-black">R$ {plan.monthlyPrice.toFixed(2).replace(".", ",")}</span>
-                <span className="text-sm text-zinc-500">por mês</span>
-                <p className="mt-4 text-sm text-zinc-700">{plan.maxUsers ? `Até ${plan.maxUsers} usuários da equipe` : "Usuários ilimitados"}</p>
-              </label>
-            ))}
-          </div>
-        </fieldset>
-        <input type="hidden" name="billingCycle" value="MONTHLY" />
+        <PlanSelector plans={planOptions} />
         <button className="rounded-xl bg-red-600 px-6 py-4 font-bold text-white hover:bg-red-700">Criar minha hamburgueria</button>
       </form>
     </div>
