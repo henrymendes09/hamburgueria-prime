@@ -40,7 +40,8 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
   });
   const [cepLoading, setCepLoading] = useState(false);
   const [scheduledFor, setScheduledFor] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"PIX" | "CARTAO" | "DINHEIRO">("PIX");
+  const [paymentTiming, setPaymentTiming] = useState<"AGORA" | "ENTREGA">("AGORA");
+  const [deliveryPaymentMethod, setDeliveryPaymentMethod] = useState<"CARTAO" | "DINHEIRO">("CARTAO");
   const [changeFor, setChangeFor] = useState("");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,6 +55,8 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
       : Math.min(coupon.value, subtotal)
     : 0;
   const total = Math.max(subtotal + deliveryFee - discount, 0);
+  const paymentMethod: "PIX" | "CARTAO" | "DINHEIRO" =
+    paymentTiming === "AGORA" ? "PIX" : deliveryPaymentMethod;
 
   async function handleCepBlur() {
     const digits = newAddress.cep.replace(/\D/g, "");
@@ -279,62 +282,49 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
         {/* Pagamento */}
         <section className="rounded-2xl border-2 border-ink/5 p-6">
           <h2 className="font-display text-xl text-ink mb-4">Pagamento</h2>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <button
               type="button"
-              onClick={() => setPaymentMethod("PIX")}
+              onClick={() => setPaymentTiming("AGORA")}
               className={cn(
-                "flex flex-col items-center gap-1.5 rounded-xl border-2 py-3 text-xs font-bold uppercase",
-                paymentMethod === "PIX" ? "border-flame bg-flame/5 text-flame" : "border-ink/10 text-ink/60"
+                "flex items-center gap-3 rounded-xl border-2 p-4 text-left",
+                paymentTiming === "AGORA" ? "border-flame bg-flame/5 text-flame" : "border-ink/10 text-ink/60"
               )}
             >
-              <QrCode className="h-5 w-5" /> Pix
+              <QrCode className="h-6 w-6 shrink-0" />
+              <span><strong className="block text-sm uppercase">Pagar agora</strong><small className="normal-case opacity-70">PIX</small></span>
             </button>
             <button
               type="button"
-              onClick={() => setPaymentMethod("CARTAO")}
+              onClick={() => setPaymentTiming("ENTREGA")}
               className={cn(
-                "flex flex-col items-center gap-1.5 rounded-xl border-2 py-3 text-xs font-bold uppercase",
-                paymentMethod === "CARTAO" ? "border-flame bg-flame/5 text-flame" : "border-ink/10 text-ink/60"
+                "flex items-center gap-3 rounded-xl border-2 p-4 text-left",
+                paymentTiming === "ENTREGA" ? "border-flame bg-flame/5 text-flame" : "border-ink/10 text-ink/60"
               )}
             >
-              <CreditCard className="h-5 w-5" /> Cartão
-            </button>
-            <button
-              type="button"
-              onClick={() => setPaymentMethod("DINHEIRO")}
-              className={cn(
-                "flex flex-col items-center gap-1.5 rounded-xl border-2 py-3 text-xs font-bold uppercase",
-                paymentMethod === "DINHEIRO" ? "border-flame bg-flame/5 text-flame" : "border-ink/10 text-ink/60"
-              )}
-            >
-              <Wallet className="h-5 w-5" /> Dinheiro
+              <Wallet className="h-6 w-6 shrink-0" />
+              <span><strong className="block text-sm uppercase">{deliveryType === "ENTREGA" ? "Pagar na entrega" : "Pagar na retirada"}</strong><small className="normal-case opacity-70">Cartão ou dinheiro</small></span>
             </button>
           </div>
 
-          {paymentMethod === "PIX" && (
+          {paymentTiming === "AGORA" && (
             <p className="mt-4 text-xs text-ash-light normal-case">
-              A chave Pix e o QR code são exibidos após a confirmação do pedido. Para processar
-              pagamentos Pix reais, configure um provedor (ex. Mercado Pago) no arquivo .env.
+              O QR code PIX será exibido após a confirmação do pedido.
             </p>
           )}
-          {paymentMethod === "CARTAO" && (
-            <p className="mt-4 text-xs text-ash-light normal-case">
-              A cobrança do cartão é processada na entrega/retirada ou via link enviado pelo
-              WhatsApp, até a integração com um gateway de pagamento.
-            </p>
-          )}
-          {paymentMethod === "DINHEIRO" && (
-            <div className="mt-4">
-              <Label>Troco para quanto?</Label>
-              <Input
-                type="number"
-                min={total}
-                step="0.01"
-                value={changeFor}
-                onChange={(e) => setChangeFor(e.target.value)}
-                placeholder={formatMoney(total)}
-              />
+          {paymentTiming === "ENTREGA" && (
+            <div className="mt-4 rounded-xl bg-ink/[0.03] p-4">
+              <p className="mb-3 text-sm font-bold">Como deseja pagar {deliveryType === "ENTREGA" ? "na entrega" : "na retirada"}?</p>
+              <div className="grid grid-cols-2 gap-3">
+                <button type="button" onClick={() => setDeliveryPaymentMethod("CARTAO")} className={cn("flex items-center justify-center gap-2 rounded-xl border-2 py-3 text-xs font-bold uppercase", deliveryPaymentMethod === "CARTAO" ? "border-flame bg-flame/5 text-flame" : "border-ink/10 text-ink/60")}><CreditCard className="h-5 w-5" /> Cartão</button>
+                <button type="button" onClick={() => setDeliveryPaymentMethod("DINHEIRO")} className={cn("flex items-center justify-center gap-2 rounded-xl border-2 py-3 text-xs font-bold uppercase", deliveryPaymentMethod === "DINHEIRO" ? "border-flame bg-flame/5 text-flame" : "border-ink/10 text-ink/60")}><Wallet className="h-5 w-5" /> Dinheiro</button>
+              </div>
+              {deliveryPaymentMethod === "DINHEIRO" && (
+                <div className="mt-4">
+                  <Label>Troco para quanto?</Label>
+                  <Input type="number" min={total} step="0.01" value={changeFor} onChange={(e) => setChangeFor(e.target.value)} placeholder={formatMoney(total)} />
+                </div>
+              )}
             </div>
           )}
         </section>
@@ -376,9 +366,13 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
               <span>Total</span>
               <span className="text-flame">{formatMoney(total)}</span>
             </div>
+            <div className="flex justify-between gap-3 pt-2 text-xs text-ash">
+              <span>Pagamento</span>
+              <span className="text-right font-semibold text-ink">{paymentTiming === "AGORA" ? "Agora via PIX" : `${deliveryPaymentMethod === "CARTAO" ? "Cartão" : "Dinheiro"} ${deliveryType === "ENTREGA" ? "na entrega" : "na retirada"}`}</span>
+            </div>
           </div>
           <Button className="w-full mt-5" size="lg" onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? "Enviando pedido..." : "Confirmar Pedido"}
+            {isSubmitting ? "Enviando pedido..." : paymentTiming === "AGORA" ? "Pagar agora com PIX" : "Confirmar pedido"}
           </Button>
         </div>
       </div>

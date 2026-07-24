@@ -47,7 +47,7 @@ export async function updateOrderStatusAction(
       acceptedAt: newStatus === "ACEITO" ? new Date() : order.acceptedAt,
       deliveredAt: newStatus === "ENTREGUE" ? new Date() : order.deliveredAt,
       paymentStatus:
-        newStatus === "ENTREGUE" && order.paymentMethod !== "CARTAO" ? "PAGO" : order.paymentStatus,
+        newStatus === "ENTREGUE" && order.paymentMethod !== "PIX" ? "PAGO" : order.paymentStatus,
       statusLog: { create: { status: newStatus as never } },
     },
   });
@@ -89,7 +89,8 @@ export async function entregadorUpdateStatusAction(
     data: {
       status: newStatus,
       deliveredAt: newStatus === "ENTREGUE" ? new Date() : order.deliveredAt,
-      paymentStatus: newStatus === "ENTREGUE" ? "PAGO" : order.paymentStatus,
+      paymentStatus:
+        newStatus === "ENTREGUE" && order.paymentMethod !== "PIX" ? "PAGO" : order.paymentStatus,
       statusLog: { create: { status: newStatus } },
     },
   });
