@@ -9,11 +9,14 @@ export async function GET(request: NextRequest) {
 
   const restaurant = await prisma.restaurant.findUnique({
     where: { slug },
-    select: { name: true, slug: true, description: true, primaryColor: true },
+    select: { name: true, slug: true, description: true, primaryColor: true, updatedAt: true },
   });
   if (!restaurant) return NextResponse.json({ error: "Hamburgueria não encontrada." }, { status: 404 });
 
-  const iconUrl = `/api/pwa/icon?loja=${encodeURIComponent(restaurant.slug)}`;
+  const iconBase = `/api/pwa/icon?loja=${encodeURIComponent(restaurant.slug)}&v=${restaurant.updatedAt.getTime()}`;
+  const icon192 = `${iconBase}&size=192`;
+  const icon512 = `${iconBase}&size=512`;
+  const maskable512 = `${iconBase}&size=512&maskable=1`;
   const storeUrl = `/loja/${encodeURIComponent(restaurant.slug)}`;
   const manifest = {
     id: storeUrl,
@@ -29,13 +32,14 @@ export async function GET(request: NextRequest) {
     categories: ["food", "business", "shopping"],
     lang: "pt-BR",
     icons: [
-      { src: iconUrl, sizes: "any", purpose: "any" },
-      { src: iconUrl, sizes: "any", purpose: "maskable" },
+      { src: icon192, sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: icon512, sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: maskable512, sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
     shortcuts: [
-      { name: "Fazer pedido", short_name: "Pedir", url: storeUrl, icons: [{ src: iconUrl, sizes: "any" }] },
-      { name: "Painel da hamburgueria", short_name: "Painel", url: "/admin", icons: [{ src: iconUrl, sizes: "any" }] },
-      { name: "Área do entregador", short_name: "Entregas", url: "/entregador", icons: [{ src: iconUrl, sizes: "any" }] },
+      { name: "Fazer pedido", short_name: "Pedir", url: storeUrl, icons: [{ src: icon192, sizes: "192x192", type: "image/png" }] },
+      { name: "Painel da hamburgueria", short_name: "Painel", url: "/admin", icons: [{ src: icon192, sizes: "192x192", type: "image/png" }] },
+      { name: "Área do entregador", short_name: "Entregas", url: "/entregador", icons: [{ src: icon192, sizes: "192x192", type: "image/png" }] },
     ],
   };
 
