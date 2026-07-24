@@ -12,6 +12,12 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { default: restaurant.name, template: `%s | ${restaurant.name}` },
     description,
     openGraph: { title: restaurant.name, description, siteName: restaurant.name, type: "website" },
+    manifest: `/api/pwa/manifest?loja=${encodeURIComponent(restaurant.slug)}`,
+    icons: {
+      icon: `/api/pwa/icon?loja=${encodeURIComponent(restaurant.slug)}`,
+      apple: `/api/pwa/icon?loja=${encodeURIComponent(restaurant.slug)}`,
+    },
+    appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: restaurant.name.slice(0, 18) },
   };
 }
 

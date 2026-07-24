@@ -3,8 +3,23 @@ import { auth } from "@/lib/auth";
 import { signOut } from "@/lib/auth";
 import { EntregadorBoard } from "@/components/admin/entregador-board";
 import { LogOut } from "lucide-react";
+import type { Metadata } from "next";
 
-export const metadata = { title: "Meus Pedidos" };
+export async function generateMetadata(): Promise<Metadata> {
+  const session = await auth();
+  const restaurant = session?.user?.restaurantId
+    ? await prisma.restaurant.findUnique({ where: { id: session.user.restaurantId }, select: { name: true, slug: true } })
+    : null;
+  if (!restaurant) return { title: "Meus Pedidos" };
+  const tenant = encodeURIComponent(restaurant.slug);
+  return {
+    title: `Entregas | ${restaurant.name}`,
+    applicationName: restaurant.name,
+    manifest: `/api/pwa/manifest?loja=${tenant}`,
+    icons: { icon: `/api/pwa/icon?loja=${tenant}`, apple: `/api/pwa/icon?loja=${tenant}` },
+    appleWebApp: { capable: true, title: restaurant.name.slice(0, 18), statusBarStyle: "black-translucent" },
+  };
+}
 
 export default async function EntregadorPage() {
   const session = await auth();
