@@ -1,10 +1,11 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 
 const siteUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
 
 export const metadata: Metadata = {
+  manifest: "/manifest.webmanifest",
   metadataBase: new URL(siteUrl),
   title: {
     default: "Hamburgueria Prime — Delivery de hambúrguer artesanal",
@@ -36,6 +37,22 @@ export const metadata: Metadata = {
     description: "Hambúrgueres artesanais com entrega rápida.",
   },
   robots: { index: true, follow: true },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "HP Delivery",
+  },
+  icons: {
+    icon: "/pwa-icon.svg",
+    apple: "/pwa-icon.svg",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0e0d0c",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
