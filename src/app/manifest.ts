@@ -15,8 +15,10 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ["food", "business", "shopping"],
     lang: "pt-BR",
     icons: [
+      { src: "/pwa-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/pwa-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/pwa-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
       { src: "/pwa-icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
-      { src: "/pwa-maskable.svg", sizes: "any", type: "image/svg+xml", purpose: "maskable" },
     ],
     shortcuts: [
       {
@@ -24,21 +26,21 @@ export default function manifest(): MetadataRoute.Manifest {
         short_name: "Pedir",
         description: "Abrir a hamburgueria",
         url: "/",
-        icons: [{ src: "/pwa-icon.svg", sizes: "any", type: "image/svg+xml" }],
+        icons: [{ src: "/pwa-192.png", sizes: "192x192", type: "image/png" }],
       },
       {
         name: "Painel da hamburgueria",
         short_name: "Painel",
         description: "Gerenciar pedidos e cardápio",
         url: "/admin",
-        icons: [{ src: "/pwa-icon.svg", sizes: "any", type: "image/svg+xml" }],
+        icons: [{ src: "/pwa-192.png", sizes: "192x192", type: "image/png" }],
       },
       {
         name: "Área do entregador",
         short_name: "Entregas",
         description: "Consultar entregas atribuídas",
         url: "/entregador",
-        icons: [{ src: "/pwa-icon.svg", sizes: "any", type: "image/svg+xml" }],
+        icons: [{ src: "/pwa-192.png", sizes: "192x192", type: "image/png" }],
       },
     ],
   };
