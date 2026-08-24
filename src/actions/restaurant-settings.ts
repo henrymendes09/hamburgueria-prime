@@ -25,6 +25,9 @@ const settingsSchema = z.object({
   pixKey: z.string().trim().max(100),
   customDomain: z.string().trim().toLowerCase().max(253),
   deliveryFee: z.coerce.number().min(0).max(1000),
+  storeCep: z.string().trim().regex(/^\d{5}-?\d{3}$/).or(z.literal("")),
+  deliveryFeePerKm: z.coerce.number().min(0).max(100),
+  deliveryRadiusKm: z.coerce.number().positive().max(200),
   freeDeliveryThreshold: z.union([z.coerce.number().positive(), z.literal("")]),
 });
 
@@ -41,6 +44,7 @@ export async function updateRestaurantSettingsAction(formData: FormData) {
         logoUrl: data.logoUrl || null,
         email: data.email || null,
         customDomain: data.customDomain.replace(/^https?:\/\//, "").replace(/\/$/, "") || null,
+        storeCep: data.storeCep || null,
         freeDeliveryThreshold: data.freeDeliveryThreshold === "" ? null : data.freeDeliveryThreshold,
       },
     });

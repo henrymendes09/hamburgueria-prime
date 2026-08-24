@@ -3,6 +3,7 @@ import { formatMoney } from "@/lib/utils";
 import { DollarSign, ShoppingBag, Clock, Users, Eye, UserRoundSearch, MousePointerClick } from "lucide-react";
 import { RevenueChart } from "@/components/admin/revenue-chart";
 import { TopProductsChart } from "@/components/admin/top-products-chart";
+import { DeliveryDriversChart } from "@/components/admin/delivery-drivers-chart";
 import { requireRestaurantAdmin } from "@/lib/tenant";
 import Link from "next/link";
 
@@ -17,8 +18,13 @@ export default async function AdminDashboardPage() {
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
   const sevenDaysAgo = new Date(startOfToday.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const startOfWeek = new Date(startOfToday);
+  const dayOfWeek = (startOfWeek.getDay() + 6) % 7;
+  startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek);
+  const startOfMonth = new Date(startOfToday.getFullYear(), startOfToday.getMonth(), 1);
+  const deliveryReportStart = startOfWeek < startOfMonth ? startOfWeek : startOfMonth;
 
-  const [ordersToday, ordersInProgress, revenueAgg, customersCount, topProducts, last7DaysOrders, visitsToday, visitorsTodayRows, allVisitorsRows] =
+  const [ordersToday, ordersInProgress, revenueAgg, customersCount, topProducts, last7DaysOrders, visitsToday, visitorsTodayRows, allVisitorsRows, drivers] =
     await Promise.all([
       prisma.order.count({ where: { restaurantId, createdAt: { gte: startOfToday } } }),
       prisma.order.count({
@@ -49,7 +55,31 @@ export default async function AdminDashboardPage() {
         where: { restaurantId, createdAt: { gte: startOfToday } },
       }),
       prisma.siteVisit.groupBy({ by: ["visitorHash"], where: { restaurantId } }),
+      prisma.user.findMany({
+        where: { restaurantId, role: "ENTREGADOR" },
+        orderBy: { name: "asc" },
+        select: {
+          name: true,
+          deliveries: {
+            where: { status: "ENTREGUE", deliveredAt: { gte: deliveryReportStart } },
+            select: { deliveredAt: true, deliveryFee: true, deliveryPayout: true },
+          },
+        },
+      }),
     ]);
+
+  const deliverySummary = drivers.map((driver) => {
+    const payout = (order: { deliveryPayout: number; deliveryFee: number }) => order.deliveryPayout || order.deliveryFee;
+    const monthOrders = driver.deliveries.filter((order) => order.deliveredAt && order.deliveredAt >= startOfMonth);
+    const weekOrders = driver.deliveries.filter((order) => order.deliveredAt && order.deliveredAt >= startOfWeek);
+    return {
+      name: driver.name,
+      weekDeliveries: weekOrders.length,
+      weekPayout: weekOrders.reduce((total, order) => total + payout(order), 0),
+      monthDeliveries: monthOrders.length,
+      monthPayout: monthOrders.reduce((total, order) => total + payout(order), 0),
+    };
+  });
 
   const days: { date: string; total: number }[] = [];
   for (let i = 6; i >= 0; i--) {
@@ -108,6 +138,12 @@ export default async function AdminDashboardPage() {
           <h2 className="font-display text-lg text-ink mb-4">Produtos mais vendidos</h2>
           <TopProductsChart data={topProducts} />
         </div>
+      </div>
+
+      <div className="rounded-2xl bg-white p-6 border-2 border-ink/5">
+        <h2 className="font-display text-lg text-ink mb-1">Entregas e repasses por entregador</h2>
+        <p className="mb-4 text-xs normal-case text-ash">Semana atual e mês atual, considerando pedidos concluídos.</p>
+        <DeliveryDriversChart data={deliverySummary} />
       </div>
 
     </div>

@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCartStore, cartSubtotal, itemPrice } from "@/lib/cart-store";
 import { formatMoney } from "@/lib/utils";
-import { DELIVERY_FEE, FREE_DELIVERY_THRESHOLD } from "@/lib/validations";
 import { validateCouponAction } from "@/actions/coupons";
 import { toast } from "sonner";
 
@@ -22,13 +21,12 @@ export function CartDrawer() {
   const router = useRouter();
 
   const subtotal = cartSubtotal(items);
-  const deliveryFee = items.length === 0 ? 0 : subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
   const discount = coupon
     ? coupon.type === "PERCENTUAL"
       ? (subtotal * coupon.value) / 100
       : Math.min(coupon.value, subtotal)
     : 0;
-  const total = Math.max(subtotal + deliveryFee - discount, 0);
+  const total = Math.max(subtotal - discount, 0);
 
   function handleApplyCoupon() {
     if (!couponInput.trim()) return;
@@ -148,7 +146,7 @@ export function CartDrawer() {
                 </div>
                 <div className="flex justify-between text-ash">
                   <span>Taxa de entrega</span>
-                  <span>{deliveryFee === 0 ? "Grátis" : formatMoney(deliveryFee)}</span>
+                  <span className="normal-case">Calculada pelo endereço</span>
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between text-emerald-700 font-semibold">
@@ -156,13 +154,8 @@ export function CartDrawer() {
                     <span>-{formatMoney(discount)}</span>
                   </div>
                 )}
-                {deliveryFee > 0 && (
-                  <p className="text-xs text-ash-light">
-                    Faltam {formatMoney(FREE_DELIVERY_THRESHOLD - subtotal)} para frete grátis
-                  </p>
-                )}
                 <div className="flex justify-between font-display text-lg text-ink pt-2 border-t border-ink/5">
-                  <span>Total</span>
+                  <span>Total parcial</span>
                   <span className="text-flame">{formatMoney(total)}</span>
                 </div>
               </div>

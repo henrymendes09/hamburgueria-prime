@@ -9,6 +9,7 @@ import { headers } from "next/headers";
 import { emitOrderEvent } from "@/lib/order-events";
 import crypto from "crypto";
 import { getPublicRestaurant } from "@/lib/tenant";
+import { calculateDeliveryQuote, DeliveryQuote } from "@/lib/delivery";
 
 type CheckoutResult =
   | { success: true; orderId: string; orderNumber: number }
@@ -19,6 +20,61 @@ type PixPayment = {
   qrCode: string;
   qrCodeBase64: string;
 };
+
+type DeliveryQuoteResult =
+  | { success: true; quote: DeliveryQuote }
+  | { success: false; message: string };
+
+export async function quoteDeliveryAction(input: {
+  addressId?: string;
+  cep?: string;
+  address?: { street?: string; number?: string; neighborhood?: string; city?: string; state?: string };
+  subtotal: number;
+}): Promise<DeliveryQuoteResult> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, message: "Faça login para calcular a entrega." };
+
+  const restaurant = await getPublicRestaurant();
+  if (!restaurant.storeCep) {
+    const free = restaurant.freeDeliveryThreshold != null && input.subtotal >= restaurant.freeDeliveryThreshold;
+    return {
+      success: true,
+      quote: { distanceKm: null, customerFee: free ? 0 : restaurant.deliveryFee, driverPayout: restaurant.deliveryFee },
+    };
+  }
+
+  let customerCep = input.cep;
+  let customerAddress = input.address
+    ? [input.address.street, input.address.number, input.address.neighborhood, input.address.city, input.address.state].filter(Boolean).join(", ")
+    : undefined;
+  if (input.addressId) {
+    const address = await prisma.address.findFirst({
+      where: { id: input.addressId, userId: session.user.id },
+      select: { cep: true, street: true, number: true, neighborhood: true, city: true, state: true },
+    });
+    customerCep = address?.cep;
+    customerAddress = address
+      ? [address.street, address.number, address.neighborhood, address.city, address.state].join(", ")
+      : undefined;
+  }
+  if (!customerCep) return { success: false, message: "Informe um CEP válido." };
+
+  const result = await calculateDeliveryQuote({
+    storeCep: restaurant.storeCep,
+    customerCep,
+    storeAddress: restaurant.address ?? undefined,
+    customerAddress,
+    baseFee: restaurant.deliveryFee,
+    feePerKm: restaurant.deliveryFeePerKm,
+    freeDeliveryThreshold: restaurant.freeDeliveryThreshold,
+    subtotal: Math.max(input.subtotal, 0),
+  });
+  if (!result) return { success: false, message: "Não foi possível localizar este CEP." };
+  if (result.quote.distanceKm != null && result.quote.distanceKm > restaurant.deliveryRadiusKm) {
+    return { success: false, message: `Endereço fora do raio de ${restaurant.deliveryRadiusKm} km da loja.` };
+  }
+  return { success: true, quote: result.quote };
+}
 
 function calculateItemPrice(item: CartItem): number {
   const addonsTotal = item.addons.reduce((sum, addon) => sum + addon.price, 0);
@@ -111,6 +167,10 @@ export async function checkoutAction(
 
   // Endereço: usa existente ou cria um novo a partir do checkout
   let addressId: string | undefined;
+  let deliveryAddress: {
+    cep: string; street: string; number: string; neighborhood: string; city: string; state: string;
+    latitude: number | null; longitude: number | null;
+  } | null = null;
   if (data.deliveryType === "ENTREGA") {
     if (data.addressId) {
       const addr = await prisma.address.findFirst({
@@ -118,22 +178,50 @@ export async function checkoutAction(
       });
       if (!addr) return { success: false, message: "Endereço inválido." };
       addressId = addr.id;
+      deliveryAddress = addr;
     } else if (data.newAddress) {
       const created = await prisma.address.create({
         data: { ...data.newAddress, userId: session.user.id },
       });
       addressId = created.id;
+      deliveryAddress = created;
     } else {
       return { success: false, message: "Informe o endereço de entrega." };
     }
   }
 
-  const deliveryFee =
-    data.deliveryType === "RETIRADA"
-      ? 0
-      : activeRestaurant.freeDeliveryThreshold && subtotal >= activeRestaurant.freeDeliveryThreshold
-      ? 0
-      : activeRestaurant.deliveryFee;
+  let deliveryFee = 0;
+  let deliveryPayout = 0;
+  let deliveryDistanceKm: number | null = null;
+  if (data.deliveryType === "ENTREGA") {
+    if (activeRestaurant.storeCep && deliveryAddress) {
+      const delivery = await calculateDeliveryQuote({
+        storeCep: activeRestaurant.storeCep,
+        customerCep: deliveryAddress.cep,
+        storeAddress: activeRestaurant.address ?? undefined,
+        customerAddress: [deliveryAddress.street, deliveryAddress.number, deliveryAddress.neighborhood, deliveryAddress.city, deliveryAddress.state].join(", "),
+        baseFee: activeRestaurant.deliveryFee,
+        feePerKm: activeRestaurant.deliveryFeePerKm,
+        freeDeliveryThreshold: activeRestaurant.freeDeliveryThreshold,
+        subtotal,
+      });
+      if (!delivery) return { success: false, message: "Não foi possível calcular a distância para este CEP." };
+      if (delivery.quote.distanceKm != null && delivery.quote.distanceKm > activeRestaurant.deliveryRadiusKm) {
+        return { success: false, message: `Endereço fora do raio de ${activeRestaurant.deliveryRadiusKm} km da loja.` };
+      }
+      deliveryFee = delivery.quote.customerFee;
+      deliveryPayout = delivery.quote.driverPayout;
+      deliveryDistanceKm = delivery.quote.distanceKm;
+      if (deliveryAddress.latitude == null || deliveryAddress.longitude == null) {
+        await prisma.address.update({ where: { id: addressId! }, data: delivery.coordinates });
+      }
+    } else {
+      deliveryPayout = activeRestaurant.deliveryFee;
+      deliveryFee = activeRestaurant.freeDeliveryThreshold != null && subtotal >= activeRestaurant.freeDeliveryThreshold
+        ? 0
+        : activeRestaurant.deliveryFee;
+    }
+  }
 
   // Cupom
   let discount = 0;
@@ -195,6 +283,8 @@ export async function checkoutAction(
         changeFor: data.changeFor,
         subtotal,
         deliveryFee,
+        deliveryDistanceKm,
+        deliveryPayout,
         discount,
         total,
         notes: data.notes,

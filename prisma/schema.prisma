@@ -59,6 +59,9 @@ model Restaurant {
   address               String?
   businessHours         String?
   deliveryFee           Float            @default(0)
+  storeCep              String?
+  deliveryFeePerKm      Float            @default(1.5)
+  deliveryRadiusKm      Float            @default(15)
   freeDeliveryThreshold Float?
   pixKey                String?
   status                RestaurantStatus @default(TRIALING)
@@ -218,6 +221,8 @@ model Address {
   city         String
   state        String
   reference    String?
+  latitude     Float?
+  longitude    Float?
   isDefault    Boolean  @default(false)
   createdAt    DateTime @default(now())
 
@@ -415,31 +420,33 @@ enum DeliveryType {
 }
 
 model Order {
-  id                String        @id @default(cuid())
-  restaurantId      String
-  number            Int
-  userId            String
-  addressId         String?
-  status            OrderStatus   @default(RECEBIDO)
-  deliveryType      DeliveryType  @default(ENTREGA)
-  scheduledFor      DateTime?
-  paymentMethod     PaymentMethod
-  paymentStatus     PaymentStatus @default(PENDENTE)
-  paymentExternalId String?
-  pixQrCode         String?
-  pixQrCodeBase64   String?
-  changeFor         Float?
-  subtotal          Float
-  deliveryFee       Float         @default(0)
-  discount          Float         @default(0)
-  total             Float
-  notes             String?
-  couponId          String?
-  entregadorId      String?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  acceptedAt        DateTime?
-  deliveredAt       DateTime?
+  id                 String        @id @default(cuid())
+  restaurantId       String
+  number             Int
+  userId             String
+  addressId          String?
+  status             OrderStatus   @default(RECEBIDO)
+  deliveryType       DeliveryType  @default(ENTREGA)
+  scheduledFor       DateTime?
+  paymentMethod      PaymentMethod
+  paymentStatus      PaymentStatus @default(PENDENTE)
+  paymentExternalId  String?
+  pixQrCode          String?
+  pixQrCodeBase64    String?
+  changeFor          Float?
+  subtotal           Float
+  deliveryFee        Float         @default(0)
+  deliveryDistanceKm Float?
+  deliveryPayout     Float         @default(0)
+  discount           Float         @default(0)
+  total              Float
+  notes              String?
+  couponId           String?
+  entregadorId       String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  acceptedAt         DateTime?
+  deliveredAt        DateTime?
 
   user       User             @relation(fields: [userId], references: [id])
   address    Address?         @relation(fields: [addressId], references: [id])

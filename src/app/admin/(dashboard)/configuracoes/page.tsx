@@ -25,7 +25,10 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
       <Field label="Endereço" name="address" value={restaurant.address ?? ""} />
       <Field label="Horários" name="businessHours" value={restaurant.businessHours ?? ""} placeholder="Terça a domingo, 18h às 23h" />
       <Field label="Chave PIX" name="pixKey" value={restaurant.pixKey ?? ""} />
-      <Field label="Taxa de entrega" name="deliveryFee" value={restaurant.deliveryFee} type="number" step="0.01" required />
+      <Field label="CEP da loja" name="storeCep" value={restaurant.storeCep ?? ""} placeholder="00000-000" required />
+      <Field label="Taxa base de entrega" name="deliveryFee" value={restaurant.deliveryFee} type="number" step="0.01" required />
+      <Field label="Valor por km" name="deliveryFeePerKm" value={restaurant.deliveryFeePerKm} type="number" step="0.01" required />
+      <Field label="Raio máximo de entrega (km)" name="deliveryRadiusKm" value={restaurant.deliveryRadiusKm} type="number" step="0.1" required />
       <Field label="Frete grátis acima de" name="freeDeliveryThreshold" value={restaurant.freeDeliveryThreshold ?? ""} type="number" step="0.01" />
       <label className="grid gap-2 font-semibold md:col-span-2">Descrição<textarea name="description" defaultValue={restaurant.description ?? ""} maxLength={300} className="min-h-24 rounded-xl border p-3 font-normal" /></label>
       <SettingsSubmitButton />

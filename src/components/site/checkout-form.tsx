@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { User, Address } from "@prisma/client";
@@ -10,8 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { formatMoney, formatCEP, formatPhone, formatCPF } from "@/lib/utils";
 import { useCartStore, cartSubtotal, itemPrice } from "@/lib/cart-store";
-import { DELIVERY_FEE, FREE_DELIVERY_THRESHOLD } from "@/lib/validations";
-import { checkoutAction } from "@/actions/checkout";
+import { checkoutAction, quoteDeliveryAction } from "@/actions/checkout";
 import { Truck, Store, Wallet, QrCode, CreditCard, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -45,10 +44,12 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
   const [changeFor, setChangeFor] = useState("");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deliveryQuote, setDeliveryQuote] = useState<{ distanceKm: number | null; customerFee: number } | null>(null);
+  const [deliveryQuoteError, setDeliveryQuoteError] = useState("");
+  const [deliveryQuoteLoading, setDeliveryQuoteLoading] = useState(false);
 
   const subtotal = cartSubtotal(items);
-  const deliveryFee =
-    deliveryType === "RETIRADA" ? 0 : subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
+  const deliveryFee = deliveryType === "RETIRADA" ? 0 : deliveryQuote?.customerFee ?? 0;
   const discount = coupon
     ? coupon.type === "PERCENTUAL"
       ? (subtotal * coupon.value) / 100
@@ -57,6 +58,40 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
   const total = Math.max(subtotal + deliveryFee - discount, 0);
   const paymentMethod: "PIX" | "CARTAO" | "DINHEIRO" =
     paymentTiming === "AGORA" ? "PIX" : deliveryPaymentMethod;
+
+  useEffect(() => {
+    if (deliveryType === "RETIRADA") return;
+
+    const cep = useNewAddress ? newAddress.cep.replace(/\D/g, "") : undefined;
+    if ((useNewAddress && cep?.length !== 8) || (!useNewAddress && !addressId)) {
+      return;
+    }
+
+    let active = true;
+    const timeout = window.setTimeout(async () => {
+      setDeliveryQuoteLoading(true);
+      setDeliveryQuote(null);
+      setDeliveryQuoteError("");
+      const result = await quoteDeliveryAction({
+        addressId: useNewAddress ? undefined : addressId,
+        cep,
+        address: useNewAddress ? newAddress : undefined,
+        subtotal,
+      });
+      if (!active) return;
+      if (result.success) setDeliveryQuote(result.quote);
+      else {
+        setDeliveryQuote(null);
+        setDeliveryQuoteError(result.message);
+      }
+      setDeliveryQuoteLoading(false);
+    }, useNewAddress ? 450 : 0);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
+  }, [addressId, deliveryType, newAddress, subtotal, useNewAddress]);
 
   async function handleCepBlur() {
     const digits = newAddress.cep.replace(/\D/g, "");
@@ -96,6 +131,10 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
         return;
       }
     }
+    if (deliveryType === "ENTREGA" && !deliveryQuote) {
+      toast.error(deliveryQuoteError || "Aguarde o cálculo da entrega.");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -134,7 +173,7 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
     <div className="grid gap-8 lg:grid-cols-3">
       <div className="lg:col-span-2 space-y-6">
         {/* Dados pessoais */}
-        <section className="rounded-2xl border-2 border-ink/5 p-6">
+        <section className="rounded-2xl border-2 border-ink/5 p-4 sm:p-6">
           <h2 className="font-display text-xl text-ink mb-4">Dados pessoais</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
@@ -155,10 +194,13 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
         {/* Entrega */}
         <section className="rounded-2xl border-2 border-ink/5 p-6">
           <h2 className="font-display text-xl text-ink mb-4">Entrega</h2>
-          <div className="grid grid-cols-2 gap-3 mb-5">
+          <div className="grid grid-cols-1 gap-3 mb-5 min-[420px]:grid-cols-2">
             <button
               type="button"
-              onClick={() => setDeliveryType("ENTREGA")}
+              onClick={() => {
+                setDeliveryType("ENTREGA");
+                setDeliveryQuote(null);
+              }}
               className={cn(
                 "flex items-center justify-center gap-2 rounded-xl border-2 py-3 text-sm font-bold uppercase",
                 deliveryType === "ENTREGA" ? "border-flame bg-flame/5 text-flame" : "border-ink/10 text-ink/60"
@@ -198,6 +240,7 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
                         onChange={() => {
                           setAddressId(addr.id);
                           setUseNewAddress(false);
+                          setDeliveryQuote(null);
                         }}
                       />
                       <div className="text-sm">
@@ -213,7 +256,10 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
                   ))}
                   <button
                     type="button"
-                    onClick={() => setUseNewAddress(true)}
+                    onClick={() => {
+                      setUseNewAddress(true);
+                      setDeliveryQuote(null);
+                    }}
                     className={cn(
                       "text-sm font-bold text-flame",
                       useNewAddress && "underline"
@@ -230,7 +276,10 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
                     <Label>CEP</Label>
                     <Input
                       value={newAddress.cep}
-                      onChange={(e) => setNewAddress((p) => ({ ...p, cep: formatCEP(e.target.value) }))}
+                      onChange={(e) => {
+                        setNewAddress((p) => ({ ...p, cep: formatCEP(e.target.value) }));
+                        setDeliveryQuote(null);
+                      }}
                       onBlur={handleCepBlur}
                       placeholder="00000-000"
                     />
@@ -266,6 +315,15 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
                   </div>
                 </div>
               )}
+              <div className="rounded-xl bg-ink/[0.03] p-3 text-sm normal-case">
+                {deliveryQuoteLoading && <p className="text-ash">Calculando distância e taxa de entrega...</p>}
+                {!deliveryQuoteLoading && deliveryQuote && (
+                  <p className="font-semibold text-ink">
+                    {deliveryQuote.distanceKm == null ? "Taxa fixa" : `${deliveryQuote.distanceKm.toFixed(1)} km da loja`} · {deliveryQuote.customerFee === 0 ? "Entrega grátis" : formatMoney(deliveryQuote.customerFee)}
+                  </p>
+                )}
+                {!deliveryQuoteLoading && deliveryQuoteError && <p className="text-red-600">{deliveryQuoteError}</p>}
+              </div>
             </div>
           )}
 
@@ -280,7 +338,7 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
         </section>
 
         {/* Pagamento */}
-        <section className="rounded-2xl border-2 border-ink/5 p-6">
+        <section className="rounded-2xl border-2 border-ink/5 p-4 sm:p-6">
           <h2 className="font-display text-xl text-ink mb-4">Pagamento</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             <button
@@ -315,7 +373,7 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
           {paymentTiming === "ENTREGA" && (
             <div className="mt-4 rounded-xl bg-ink/[0.03] p-4">
               <p className="mb-3 text-sm font-bold">Como deseja pagar {deliveryType === "ENTREGA" ? "na entrega" : "na retirada"}?</p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
                 <button type="button" onClick={() => setDeliveryPaymentMethod("CARTAO")} className={cn("flex items-center justify-center gap-2 rounded-xl border-2 py-3 text-xs font-bold uppercase", deliveryPaymentMethod === "CARTAO" ? "border-flame bg-flame/5 text-flame" : "border-ink/10 text-ink/60")}><CreditCard className="h-5 w-5" /> Cartão</button>
                 <button type="button" onClick={() => setDeliveryPaymentMethod("DINHEIRO")} className={cn("flex items-center justify-center gap-2 rounded-xl border-2 py-3 text-xs font-bold uppercase", deliveryPaymentMethod === "DINHEIRO" ? "border-flame bg-flame/5 text-flame" : "border-ink/10 text-ink/60")}><Wallet className="h-5 w-5" /> Dinheiro</button>
               </div>
@@ -354,7 +412,7 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
             </div>
             <div className="flex justify-between text-ash">
               <span>Entrega</span>
-              <span>{deliveryFee === 0 ? "Grátis" : formatMoney(deliveryFee)}</span>
+              <span>{deliveryType === "ENTREGA" && !deliveryQuote ? "A calcular" : deliveryFee === 0 ? "Grátis" : formatMoney(deliveryFee)}</span>
             </div>
             {discount > 0 && (
               <div className="flex justify-between text-emerald-700 font-semibold">
@@ -371,7 +429,7 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
               <span className="text-right font-semibold text-ink">{paymentTiming === "AGORA" ? "Agora via PIX" : `${deliveryPaymentMethod === "CARTAO" ? "Cartão" : "Dinheiro"} ${deliveryType === "ENTREGA" ? "na entrega" : "na retirada"}`}</span>
             </div>
           </div>
-          <Button className="w-full mt-5" size="lg" onClick={handleSubmit} disabled={isSubmitting}>
+          <Button className="w-full mt-5" size="lg" onClick={handleSubmit} disabled={isSubmitting || deliveryQuoteLoading || (deliveryType === "ENTREGA" && !deliveryQuote)}>
             {isSubmitting ? "Enviando pedido..." : paymentTiming === "AGORA" ? "Pagar agora com PIX" : "Confirmar pedido"}
           </Button>
         </div>
