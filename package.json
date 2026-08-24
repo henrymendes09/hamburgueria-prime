@@ -12,6 +12,7 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "db:sync-product-images": "tsx scripts/sync-product-images.ts",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate"
   },

@@ -12,13 +12,9 @@ function slugify(text: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
-const MENU_IMAGES = {
-  burger: "/images/menu/burger.png",
-  drink: "/images/menu/drinks.png",
-  fries: "/images/menu/fries.png",
-  dessert: "/images/menu/desserts.png",
-  combo: "/images/menu/combos.png",
-};
+function menuImage(name: string): string {
+  return `/images/menu/products/${slugify(name)}.webp`;
+}
 
 async function main() {
   console.log("Limpando banco de dados...");
@@ -119,7 +115,7 @@ async function main() {
         slug: slugify(name),
         description,
         ingredients,
-        image: MENU_IMAGES.burger,
+        image: menuImage(name),
         price: Number(price.toFixed(2)),
         promoPrice: hasPromo ? Number((price * 0.85).toFixed(2)) : null,
         categoryId: catBurger.id,
@@ -167,7 +163,7 @@ async function main() {
         slug: slugify(name),
         description: "Gelado e pronto para acompanhar seu lanche.",
         ingredients: name,
-        image: MENU_IMAGES.drink,
+        image: menuImage(name),
         price,
         categoryId: catDrink.id,
         available: true,
@@ -196,7 +192,7 @@ async function main() {
         slug: slugify(name),
         description,
         ingredients: "batata, sal, temperos da casa",
-        image: MENU_IMAGES.fries,
+        image: menuImage(name),
         price,
         categoryId: catFries.id,
         available: true,
@@ -235,7 +231,7 @@ async function main() {
         slug: slugify(name),
         description,
         ingredients: "ingredientes selecionados da casa",
-        image: MENU_IMAGES.dessert,
+        image: menuImage(name),
         price,
         categoryId: catDessert.id,
         available: true,
@@ -270,7 +266,7 @@ async function main() {
         ingredients: isFamily
           ? "4 hambúrgueres da casa, batata frita, refrigerante"
           : `${burger.name}, batata frita, refrigerante`,
-        image: MENU_IMAGES.combo,
+        image: menuImage(name),
         price: Number(price.toFixed(2)),
         promoPrice: i % 3 === 0 ? Number((price * 0.9).toFixed(2)) : null,
         categoryId: catCombo.id,
