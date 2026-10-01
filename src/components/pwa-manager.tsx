@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Download, X } from "lucide-react";
 
 interface InstallPromptEvent extends Event {
@@ -9,9 +10,12 @@ interface InstallPromptEvent extends Event {
 }
 
 export function PwaManager() {
+  const pathname = usePathname();
+  const isAdminPage = pathname === "/admin" || pathname?.startsWith("/admin/") || pathname === "/super-admin" || pathname?.startsWith("/super-admin/");
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [showIosHelp, setShowIosHelp] = useState(false);
   const [dismissed, setDismissed] = useState(true);
+  const dismissedForSession = useRef(false);
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
@@ -21,8 +25,10 @@ export function PwaManager() {
     const standalone = window.matchMedia("(display-mode: standalone)").matches;
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
     const wasDismissed = sessionStorage.getItem("pwa-install-dismissed") === "1";
+    dismissedForSession.current = wasDismissed;
     if (!standalone && !wasDismissed) {
       queueMicrotask(() => {
+        if (dismissedForSession.current) return;
         setDismissed(false);
         setShowIosHelp(ios);
       });
@@ -30,26 +36,30 @@ export function PwaManager() {
 
     const handleInstallPrompt = (event: Event) => {
       event.preventDefault();
+      // Read the current dismissal instead of the value captured when this listener mounted.
+      if (standalone || dismissedForSession.current || sessionStorage.getItem("pwa-install-dismissed") === "1") return;
       setInstallPrompt(event as InstallPromptEvent);
-      if (!wasDismissed) setDismissed(false);
+      setDismissed(false);
     };
     window.addEventListener("beforeinstallprompt", handleInstallPrompt);
     return () => window.removeEventListener("beforeinstallprompt", handleInstallPrompt);
   }, []);
 
-  if (dismissed || (!installPrompt && !showIosHelp)) return null;
+  if (isAdminPage || dismissed || (!installPrompt && !showIosHelp)) return null;
 
   async function install() {
     if (!installPrompt) return;
     await installPrompt.prompt();
     const choice = await installPrompt.userChoice;
-    if (choice.outcome === "accepted") setDismissed(true);
+    if (choice.outcome === "accepted") dismiss();
     setInstallPrompt(null);
   }
 
   function dismiss() {
+    dismissedForSession.current = true;
     sessionStorage.setItem("pwa-install-dismissed", "1");
     setDismissed(true);
+    setInstallPrompt(null);
   }
 
   return (
