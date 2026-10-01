@@ -1,0 +1,45 @@
+name: hamburgueria-prime-local
+services:
+  db:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_USER: prime
+      POSTGRES_PASSWORD: prime_local_only
+      POSTGRES_DB: hamburgueria_prime_dev
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prime -d hamburgueria_prime_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+  setup:
+    build: .
+    image: hamburgueria-prime-local-app
+    environment:
+      DATABASE_URL: postgresql://prime:prime_local_only@db:5432/hamburgueria_prime_dev
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["sh", "-c", "npx prisma db push && npx tsx scripts/seed-docker.ts"]
+  app:
+    build: .
+    image: hamburgueria-prime-local-app
+    env_file: .env.docker
+    environment:
+      DATABASE_URL: postgresql://prime:prime_local_only@db:5432/hamburgueria_prime_dev
+      NEXTAUTH_URL: http://localhost:3000
+      AUTH_TRUST_HOST: "true"
+      DEFAULT_RESTAURANT_SLUG: hamburgueria-prime
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - uploads:/app/public/uploads
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+    restart: unless-stopped
+volumes:
+  postgres_data:
+  uploads:

@@ -1,0 +1,14 @@
+.git
+.agents
+.codex
+node_modules
+.next
+.env*
+*.log
+*.mp4
+*.exe
+*.tsbuildinfo
+.vercel
+public/uploads/*
+security-audit
+security-audit-dependencies.json

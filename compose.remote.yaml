@@ -1,0 +1,20 @@
+# Connect only the app to an existing database. No schema or seed commands.
+# Uses the local project's app service so both apps do not compete for port 3000.
+name: hamburgueria-prime-local
+services:
+  app:
+    image: hamburgueria-prime-local-app
+    env_file:
+      - .env.docker
+      - .env.remote
+    environment:
+      NEXTAUTH_URL: http://localhost:3000
+      AUTH_TRUST_HOST: "true"
+      DEFAULT_RESTAURANT_SLUG: hamburgueria-prime
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - uploads:/app/public/uploads
+    restart: unless-stopped
+volumes:
+  uploads:
