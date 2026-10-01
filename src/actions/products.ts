@@ -10,7 +10,7 @@ type ActionResult = { success: boolean; message: string; id?: string };
 
 async function requireAdmin() {
   const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user?.id || session.user.blocked || session.user.role !== "ADMIN") {
     throw new Error("Não autorizado.");
   }
   if (!session.user.restaurantId) throw new Error("Empresa não identificada.");
@@ -27,6 +27,13 @@ export async function upsertProductAction(
     return { success: false, message: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
   const data = parsed.data;
+  const category = await prisma.category.findFirst({ where: { id: data.categoryId, restaurantId }, select: { id: true } });
+  if (!category) return { success: false, message: "Categoria não encontrada nesta loja." };
+  const addonIds = [...new Set(data.addonIds ?? [])];
+  if (addonIds.length) {
+    const addons = await prisma.addon.count({ where: { id: { in: addonIds }, restaurantId } });
+    if (addons !== addonIds.length) return { success: false, message: "Adicional não encontrado nesta loja." };
+  }
   const slug = slugify(data.name);
 
   const payload = {
@@ -42,21 +49,22 @@ export async function upsertProductAction(
     featured: data.featured ?? false,
   };
 
+  const product = await prisma.$transaction(async (tx) => {
   let product;
   if (productId) {
-    const owned = await prisma.product.findFirst({ where: { id: productId, restaurantId } });
-    if (!owned) return { success: false, message: "Produto não encontrado." };
-    product = await prisma.product.update({ where: { id: productId }, data: payload });
-    await prisma.productAddon.deleteMany({ where: { productId } });
+    product = await tx.product.update({ where: { id: productId, restaurantId }, data: payload });
+    await tx.productAddon.deleteMany({ where: { productId } });
   } else {
-    product = await prisma.product.create({ data: { ...payload, restaurantId } });
+    product = await tx.product.create({ data: { ...payload, restaurantId } });
   }
 
-  if (data.addonIds?.length) {
-    await prisma.productAddon.createMany({
-      data: data.addonIds.map((addonId) => ({ productId: product.id, addonId })),
+  if (addonIds.length) {
+    await tx.productAddon.createMany({
+      data: addonIds.map((addonId) => ({ productId: product.id, addonId })),
     });
   }
+  return product;
+  });
 
   revalidatePath("/admin/cardapio");
   revalidatePath("/cardapio");
@@ -94,10 +102,11 @@ export async function upsertCategoryAction(
   }
   const slug = slugify(parsed.data.name);
   if (categoryId) {
-    await prisma.category.update({
-      where: { id: categoryId },
+    const result = await prisma.category.updateMany({
+      where: { id: categoryId, restaurantId },
       data: { ...parsed.data, slug },
     });
+    if (!result.count) return { success: false, message: "Categoria não encontrada." };
   } else {
     await prisma.category.create({ data: { ...parsed.data, slug, restaurantId } });
   }
@@ -127,7 +136,8 @@ export async function upsertAddonAction(
     return { success: false, message: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
   if (addonId) {
-    await prisma.addon.update({ where: { id: addonId }, data: parsed.data });
+    const result = await prisma.addon.updateMany({ where: { id: addonId, restaurantId }, data: parsed.data });
+    if (!result.count) return { success: false, message: "Adicional não encontrado." };
   } else {
     await prisma.addon.create({ data: { ...parsed.data, restaurantId } });
   }

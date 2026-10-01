@@ -5,12 +5,17 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createMercadoPagoSubscription } from "@/lib/mercado-pago-subscriptions";
 import { planPricing } from "@/lib/plan-pricing";
+import { z } from "zod";
+import { headers } from "next/headers";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 function slugify(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
 export async function createRestaurantAction(formData: FormData) {
+  const limited = await rateLimit(`signup-store:${clientIp(await headers())}`, { limit: 3, windowMs: 3600000 });
+  if (!limited.success) redirect("/comece?erro=limite");
   const name = String(formData.get("restaurantName") || "").trim();
   const ownerName = String(formData.get("ownerName") || "").trim();
   const email = String(formData.get("email") || "").trim().toLowerCase();
@@ -18,7 +23,8 @@ export async function createRestaurantAction(formData: FormData) {
   const password = String(formData.get("password") || "");
   const planId = String(formData.get("planId") || "");
   const billingCycle = formData.get("billingCycle") === "YEARLY" ? "YEARLY" : "MONTHLY";
-  if (name.length < 3 || ownerName.length < 3 || !email.includes("@") || password.length < 8) redirect("/comece?erro=dados");
+  const input = z.object({ name: z.string().min(3).max(100), ownerName: z.string().min(3).max(100), email: z.string().email().max(254), phone: z.string().max(30), password: z.string().min(10).max(72).refine(value => Buffer.byteLength(value, "utf8") <= 72), planId: z.string().min(1).max(64) }).safeParse({ name, ownerName, email, phone, password, planId });
+  if (!input.success) redirect("/comece?erro=dados");
   if (await prisma.user.findUnique({ where: { email } })) redirect("/comece?erro=email");
   const plan = await prisma.plan.findFirst({ where: { id: planId, active: true } });
   if (!plan) redirect("/comece?erro=plano");

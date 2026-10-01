@@ -9,7 +9,7 @@ type ActionResult = { success: boolean; message: string };
 
 export async function addCardAction(input: unknown): Promise<ActionResult> {
   const session = await auth();
-  if (!session?.user) return { success: false, message: "Não autorizado." };
+  if (!session?.user?.id || session.user.blocked) return { success: false, message: "Não autorizado." };
 
   const parsed = cardSchema.safeParse(input);
   if (!parsed.success) {
@@ -33,7 +33,7 @@ export async function addCardAction(input: unknown): Promise<ActionResult> {
 
 export async function deleteCardAction(cardId: string): Promise<ActionResult> {
   const session = await auth();
-  if (!session?.user) return { success: false, message: "Não autorizado." };
+  if (!session?.user?.id || session.user.blocked) return { success: false, message: "Não autorizado." };
 
   await prisma.card.deleteMany({ where: { id: cardId, userId: session.user.id } });
   revalidatePath("/perfil/cartoes");

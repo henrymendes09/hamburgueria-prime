@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { getPublicRestaurant } from "@/lib/tenant";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 const VISITOR_ID_PATTERN = /^[0-9a-f-]{36}$/i;
 
 export async function POST(req: NextRequest) {
+  if (Number(req.headers.get("content-length") || 0) > 2048) return NextResponse.json({ ok: false }, { status: 413 });
+  const limited = await rateLimit(`analytics:${clientIp(req.headers)}`, { limit: 60, windowMs: 60000 });
+  if (!limited.success) return NextResponse.json({ ok: false }, { status: 429 });
   const body = (await req.json().catch(() => null)) as
     | { visitorId?: string; path?: string }
     | null;
@@ -14,9 +18,9 @@ export async function POST(req: NextRequest) {
   const path = body?.path;
 
   if (
-    !visitorId ||
+    typeof visitorId !== "string" ||
     !VISITOR_ID_PATTERN.test(visitorId) ||
-    !path ||
+    typeof path !== "string" ||
     !path.startsWith("/") ||
     path.length > 200 ||
     path.startsWith("/admin") ||

@@ -28,13 +28,13 @@ export async function getPublicRestaurant() {
 
 export async function requireRestaurantAdmin() {
   const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") redirect("/admin/login");
+  if (!session?.user?.id || session.user.blocked || session.user.role !== "ADMIN") redirect("/admin/login");
   if (!session.user.restaurantId) redirect("/admin/login?error=SEM_EMPRESA");
   return { session, restaurantId: session.user.restaurantId };
 }
 
 export async function requirePlatformAdmin() {
   const session = await auth();
-  if (!session?.user?.isPlatformAdmin) redirect("/");
+  if (!session?.user?.id || session.user.blocked || !session.user.isPlatformAdmin) redirect("/");
   return session;
 }

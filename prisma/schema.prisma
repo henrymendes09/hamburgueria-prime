@@ -13,6 +13,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model SecurityRateLimit {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+
+  @@index([resetAt])
+}
+
 // ------------------------------------------------------------------
 // Autenticação / Usuários
 // ------------------------------------------------------------------

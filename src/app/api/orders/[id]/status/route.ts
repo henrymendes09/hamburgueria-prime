@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  if (!session?.user) {
+  if (!session?.user?.id || session.user.blocked) {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
   }
 

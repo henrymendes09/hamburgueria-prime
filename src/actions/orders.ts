@@ -19,7 +19,7 @@ const NEXT_STATUS: Record<string, string[]> = {
 
 async function requireAdmin() {
   const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user?.id || session.user.blocked || session.user.role !== "ADMIN") {
     throw new Error("Não autorizado.");
   }
   if (!session.user.restaurantId) throw new Error("Empresa não identificada.");
@@ -41,7 +41,7 @@ export async function updateOrderStatusAction(
   }
 
   await prisma.order.update({
-    where: { id: orderId },
+    where: { id: orderId, restaurantId: session.user.restaurantId!, status: order.status },
     data: {
       status: newStatus as never,
       acceptedAt: newStatus === "ACEITO" ? new Date() : order.acceptedAt,
@@ -65,7 +65,7 @@ export async function assignEntregadorAction(
   const session = await requireAdmin();
   const restaurantId = session.user.restaurantId!;
   const entregador = await prisma.user.findFirst({ where: { id: entregadorId, restaurantId, role: "ENTREGADOR" } });
-  if (!entregador) return { success: false, message: "Entregador não encontrado." };
+  if (!entregador || entregador.blocked) return { success: false, message: "Entregador não encontrado." };
   await prisma.order.updateMany({ where: { id: orderId, restaurantId }, data: { entregadorId } });
   revalidatePath("/admin/pedidos");
   return { success: true, message: "Entregador atribuído." };
@@ -76,16 +76,19 @@ export async function entregadorUpdateStatusAction(
   newStatus: "SAIU_PARA_ENTREGA" | "ENTREGUE"
 ): Promise<ActionResult> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "ENTREGADOR") {
+  if (!session?.user?.id || session.user.blocked || session.user.role !== "ENTREGADOR") {
     return { success: false, message: "Não autorizado." };
   }
+  if (!session.user.restaurantId || !["SAIU_PARA_ENTREGA", "ENTREGUE"].includes(newStatus)) return { success: false, message: "Operação inválida." };
   const order = await prisma.order.findFirst({
-    where: { id: orderId, entregadorId: session.user.id, restaurantId: session.user.restaurantId ?? undefined },
+    where: { id: orderId, entregadorId: session.user.id, restaurantId: session.user.restaurantId },
   });
   if (!order) return { success: false, message: "Pedido não encontrado." };
 
+  if (!(NEXT_STATUS[order.status] ?? []).includes(newStatus)) return { success: false, message: "Transição de status inválida." };
+
   await prisma.order.update({
-    where: { id: orderId },
+    where: { id: orderId, restaurantId: session.user.restaurantId, entregadorId: session.user.id, status: order.status },
     data: {
       status: newStatus,
       deliveredAt: newStatus === "ENTREGUE" ? new Date() : order.deliveredAt,

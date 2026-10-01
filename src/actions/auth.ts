@@ -2,7 +2,7 @@
 
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 import {
   registerSchema,
   forgotPasswordSchema,
@@ -14,7 +14,7 @@ type ActionResult = { success: boolean; message: string };
 
 async function clientKey(prefix: string) {
   const h = await headers();
-  const ip = h.get("x-forwarded-for") ?? "local";
+  const ip = clientIp(h);
   return `${prefix}:${ip}`;
 }
 

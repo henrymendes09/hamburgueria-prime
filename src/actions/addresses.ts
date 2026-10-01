@@ -12,7 +12,7 @@ export async function upsertAddressAction(
   input: unknown
 ): Promise<ActionResult> {
   const session = await auth();
-  if (!session?.user) return { success: false, message: "Não autorizado." };
+  if (!session?.user?.id || session.user.blocked) return { success: false, message: "Não autorizado." };
 
   const parsed = addressSchema.safeParse(input);
   if (!parsed.success) {
@@ -42,7 +42,7 @@ export async function upsertAddressAction(
 
 export async function deleteAddressAction(addressId: string): Promise<ActionResult> {
   const session = await auth();
-  if (!session?.user) return { success: false, message: "Não autorizado." };
+  if (!session?.user?.id || session.user.blocked) return { success: false, message: "Não autorizado." };
 
   await prisma.address.deleteMany({ where: { id: addressId, userId: session.user.id } });
   revalidatePath("/perfil/enderecos");

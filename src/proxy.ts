@@ -6,6 +6,7 @@ export default auth((req) => {
   const { pathname } = req.nextUrl;
   const session = req.auth;
   const requestHeaders = new Headers(req.headers);
+  requestHeaders.delete("x-restaurant-slug");
   const requestedRestaurant = req.nextUrl.searchParams.get("loja");
   const rootRestaurant = resolveTenantSlug({
     pathname,
@@ -15,12 +16,13 @@ export default auth((req) => {
     rootDomain: process.env.PLATFORM_ROOT_DOMAIN,
     defaultSlug: "hamburgueria-prime",
   });
-  if (pathname === "/") requestHeaders.set("x-restaurant-slug", rootRestaurant);
+  requestHeaders.set("x-restaurant-slug", rootRestaurant);
 
   const isAdminRoute = pathname.startsWith("/admin") && pathname !== "/admin/login";
   const isAccountRoute = pathname.startsWith("/perfil") || pathname.startsWith("/checkout");
   const isEntregadorRoute = pathname.startsWith("/entregador") && pathname !== "/entregador/login";
   const isPlatformRoute = pathname.startsWith("/super-admin");
+  if (session?.user?.blocked) return NextResponse.redirect(new URL("/login?error=CONTA_BLOQUEADA", req.url));
 
   if (isPlatformRoute && !session?.user?.isPlatformAdmin) {
     return NextResponse.redirect(new URL("/", req.url));

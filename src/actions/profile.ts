@@ -13,7 +13,7 @@ const schema = z.object({
 
 export async function updateProfileAction(input: unknown): Promise<{ success: boolean; message: string }> {
   const session = await auth();
-  if (!session?.user) return { success: false, message: "Não autorizado." };
+  if (!session?.user?.id || session.user.blocked) return { success: false, message: "Não autorizado." };
 
   const parsed = schema.safeParse(input);
   if (!parsed.success) {

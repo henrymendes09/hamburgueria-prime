@@ -10,7 +10,7 @@ type ActionResult = { success: boolean; message: string; favorited?: boolean };
 
 export async function toggleFavoriteAction(productId: string): Promise<ActionResult> {
   const session = await auth();
-  if (!session?.user) return { success: false, message: "Faça login para favoritar produtos." };
+  if (!session?.user?.id || session.user.blocked) return { success: false, message: "Faça login para favoritar produtos." };
 
   const restaurant = await getPublicRestaurant();
   if (session.user.restaurantId !== restaurant.id) return { success: false, message: "Entre com uma conta desta hamburgueria." };
@@ -35,7 +35,7 @@ export async function toggleFavoriteAction(productId: string): Promise<ActionRes
 
 export async function createReviewAction(input: unknown): Promise<ActionResult> {
   const session = await auth();
-  if (!session?.user) return { success: false, message: "Faça login para avaliar." };
+  if (!session?.user?.id || session.user.blocked) return { success: false, message: "Faça login para avaliar." };
 
   const restaurant = await getPublicRestaurant();
   if (session.user.restaurantId !== restaurant.id) return { success: false, message: "Entre com uma conta desta hamburgueria." };

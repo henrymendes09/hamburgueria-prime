@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { checkoutSchema } from "@/lib/validations";
 import { CartItem } from "@/types/cart";
 import { headers } from "next/headers";
@@ -10,6 +10,7 @@ import { emitOrderEvent } from "@/lib/order-events";
 import crypto from "crypto";
 import { getPublicRestaurant } from "@/lib/tenant";
 import { calculateDeliveryQuote, DeliveryQuote } from "@/lib/delivery";
+import { cartSelectionSchema, priceCart, cartTotal } from "@/lib/checkout-security";
 
 type CheckoutResult =
   | { success: true; orderId: string; orderNumber: number }
@@ -32,7 +33,7 @@ export async function quoteDeliveryAction(input: {
   subtotal: number;
 }): Promise<DeliveryQuoteResult> {
   const session = await auth();
-  if (!session?.user?.id) return { success: false, message: "Faça login para calcular a entrega." };
+  if (!session?.user?.id || session.user.blocked) return { success: false, message: "Faça login para calcular a entrega." };
 
   const restaurant = await getPublicRestaurant();
   if (!restaurant.storeCep) {
@@ -74,11 +75,6 @@ export async function quoteDeliveryAction(input: {
     return { success: false, message: `Endereço fora do raio de ${restaurant.deliveryRadiusKm} km da loja.` };
   }
   return { success: true, quote: result.quote };
-}
-
-function calculateItemPrice(item: CartItem): number {
-  const addonsTotal = item.addons.reduce((sum, addon) => sum + addon.price, 0);
-  return (item.unitPrice + addonsTotal) * item.quantity;
 }
 
 async function createPixPayment(input: {
@@ -125,7 +121,7 @@ export async function checkoutAction(
   items: CartItem[]
 ): Promise<CheckoutResult> {
   const session = await auth();
-  if (!session?.user?.id) {
+  if (!session?.user?.id || session.user.blocked) {
     return { success: false, message: "Você precisa estar logado para finalizar o pedido." };
   }
   const activeRestaurant = await getPublicRestaurant();
@@ -135,15 +131,14 @@ export async function checkoutAction(
   const restaurantId = activeRestaurant.id;
 
   const h = await headers();
-  const ip = h.get("x-forwarded-for") ?? "local";
-  const limited = rateLimit(`checkout:${ip}`, { limit: 20, windowMs: 10 * 60 * 1000 });
+  const ip = clientIp(h);
+  const limited = await rateLimit(`checkout:${ip}`, { limit: 20, windowMs: 10 * 60 * 1000 });
   if (!limited.success) {
     return { success: false, message: "Muitos pedidos em pouco tempo. Aguarde um instante." };
   }
 
-  if (!items || items.length === 0) {
-    return { success: false, message: "Seu carrinho está vazio." };
-  }
+  const selections = cartSelectionSchema.safeParse(items);
+  if (!selections.success) return { success: false, message: "Carrinho inválido. Confira os produtos e quantidades." };
 
   const parsed = checkoutSchema.safeParse(rawInput);
   if (!parsed.success) {
@@ -152,18 +147,15 @@ export async function checkoutAction(
   const data = parsed.data;
 
   // Revalida preços/disponibilidade no servidor (nunca confia no preço vindo do cliente)
-  const productIds = items.map((i) => i.productId);
-  const dbProducts = await prisma.product.findMany({ where: { id: { in: productIds }, restaurantId } });
-  const productMap = new Map(dbProducts.map((p) => [p.id, p]));
-
-  for (const item of items) {
-    const dbProduct = productMap.get(item.productId);
-    if (!dbProduct || !dbProduct.available) {
-      return { success: false, message: `O produto "${item.name}" não está mais disponível.` };
-    }
+  const productIds = selections.data.map((i) => i.productId);
+  const dbProducts = await prisma.product.findMany({ where: { id: { in: productIds }, restaurantId }, include: { addons: { include: { addon: true } } } });
+  try {
+    items = priceCart(selections.data, dbProducts, restaurantId);
+  } catch (error) {
+    return { success: false, message: error instanceof Error ? error.message : "Carrinho inválido." };
   }
 
-  const subtotal = items.reduce((sum, item) => sum + calculateItemPrice(item), 0);
+  const subtotal = cartTotal(items);
 
   // Endereço: usa existente ou cria um novo a partir do checkout
   let addressId: string | undefined;
@@ -226,6 +218,7 @@ export async function checkoutAction(
   // Cupom
   let discount = 0;
   let couponId: string | undefined;
+  let selectedCoupon: Awaited<ReturnType<typeof prisma.coupon.findUnique>> = null;
   if (data.couponCode) {
     const coupon = await prisma.coupon.findUnique({
       where: { restaurantId_code: { restaurantId, code: data.couponCode.trim().toUpperCase() } },
@@ -240,10 +233,14 @@ export async function checkoutAction(
       discount = coupon.type === "PERCENTUAL" ? (subtotal * coupon.value) / 100 : coupon.value;
       discount = Math.min(discount, subtotal);
       couponId = coupon.id;
+      selectedCoupon = coupon;
+      if (coupon.singleUsePerUser && await prisma.couponRedemption.findFirst({ where: { couponId: coupon.id, userId: session.user.id } })) {
+        return { success: false, message: "Você já utilizou este cupom." };
+      }
     }
   }
 
-  const total = Math.max(subtotal + deliveryFee - discount, 0);
+  const total = Math.round(Math.max(subtotal + deliveryFee - discount, 0) * 100) / 100;
 
   let pixPayment: PixPayment | null = null;
   if (data.paymentMethod === "PIX") {
@@ -261,7 +258,17 @@ export async function checkoutAction(
     }
   }
 
-  const order = await prisma.$transaction(async (tx) => {
+  let order;
+  try {
+  order = await prisma.$transaction(async (tx) => {
+    // Serialize order numbering for this tenant and coupon consumption across instances.
+    await tx.$queryRaw`SELECT "id" FROM "Restaurant" WHERE "id" = ${restaurantId} FOR UPDATE`;
+    if (couponId && selectedCoupon) {
+      await tx.$queryRaw`SELECT "id" FROM "Coupon" WHERE "id" = ${couponId} FOR UPDATE`;
+      const current = await tx.coupon.findFirst({ where: { id: couponId, restaurantId, active: true, expiresAt: { gt: new Date() } } });
+      if (!current || subtotal < current.minOrderValue || (current.maxUses != null && current.usedCount >= current.maxUses) || current.type !== selectedCoupon.type || current.value !== selectedCoupon.value) throw new Error("Cupom indisponível. Atualize seu carrinho.");
+      if (current.singleUsePerUser && await tx.couponRedemption.findFirst({ where: { couponId, userId: session.user.id } })) throw new Error("Você já utilizou este cupom.");
+    }
     const lastOrder = await tx.order.findFirst({
       where: { restaurantId },
       orderBy: { number: "desc" },
@@ -295,7 +302,7 @@ export async function checkoutAction(
             productId: item.productId,
             productName: item.name,
             quantity: item.quantity,
-            unitPrice: item.unitPrice,
+            unitPrice: Math.round((item.unitPrice + item.addons.reduce((sum, addon) => sum + addon.price, 0)) * 100) / 100,
             addonsLabel: item.addons.map((a) => a.name).join(", ") || null,
             removedLabel: item.removedIngredients.join(", ") || null,
             notes: item.notes || null,
@@ -325,7 +332,10 @@ export async function checkoutAction(
     });
 
     return created;
-  });
+  }, { timeout: 15000 });
+  } catch {
+    return { success: false, message: "Não foi possível concluir o pedido. Verifique seu cupom e tente novamente." };
+  }
 
   emitOrderEvent({ type: "new-order", restaurantId, orderId: order.id, orderNumber: order.number });
 

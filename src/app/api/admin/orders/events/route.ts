@@ -4,7 +4,7 @@ import { orderEvents, OrderEventPayload } from "@/lib/order-events";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user?.id || session.user.blocked || session.user.role !== "ADMIN") {
     return new Response("Não autorizado", { status: 401 });
   }
 

@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ findUnique: vi.fn(), create: vi.fn(), update: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({ prisma: { user: { findUnique: mocks.findUnique, update: mocks.update }, passwordResetToken: { create: mocks.create } } }));
-vi.mock("@/lib/rate-limit", () => ({ rateLimit: async () => ({ success: true }) }));
+vi.mock("@/lib/rate-limit", () => ({ rateLimit: async () => ({ success: true }), clientIp: () => "test" }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("@/lib/tenant", () => ({ getPublicRestaurant: vi.fn() }));
 import { forgotPasswordAction, resetPasswordAction } from "./auth";

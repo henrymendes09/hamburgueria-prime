@@ -3,12 +3,20 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
+
+const staffSchema = z.object({
+  name: z.string().trim().min(2).max(100),
+  email: z.string().trim().email().max(254).toLowerCase(),
+  password: z.string().min(10).max(72).refine(value => new TextEncoder().encode(value).length <= 72),
+  role: z.enum(["ADMIN", "ENTREGADOR"]),
+});
 
 type ActionResult = { success: boolean; message: string };
 
 async function requireAdmin() {
   const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user?.id || session.user.blocked || session.user.role !== "ADMIN") {
     throw new Error("Não autorizado.");
   }
   if (!session.user.restaurantId) throw new Error("Empresa não identificada.");
@@ -30,6 +38,9 @@ export async function createStaffAction(
 ): Promise<ActionResult> {
   const restaurantId = await requireAdmin();
   const bcrypt = await import("bcryptjs");
+  const parsed = staffSchema.safeParse(input);
+  if (!parsed.success) return { success: false, message: "Dados da equipe inválidos. Use uma senha com pelo menos 10 caracteres." };
+  input = parsed.data;
   const restaurant = await prisma.restaurant.findUnique({
     where: { id: restaurantId },
     select: { subscription: { select: { plan: { select: { maxUsers: true, name: true } } } } },

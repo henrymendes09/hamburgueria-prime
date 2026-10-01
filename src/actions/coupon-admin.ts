@@ -9,7 +9,7 @@ type ActionResult = { success: boolean; message: string };
 
 async function requireAdmin() {
   const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user?.id || session.user.blocked || session.user.role !== "ADMIN") {
     throw new Error("Não autorizado.");
   }
   if (!session.user.restaurantId) throw new Error("Empresa não identificada.");

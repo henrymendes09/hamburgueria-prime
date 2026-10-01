@@ -5,6 +5,8 @@ import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { credentialVersion, isValidSession } from "@/lib/session-security";
 
 const providers: Provider[] = [
   Credentials({
@@ -13,14 +15,21 @@ const providers: Provider[] = [
       email: { label: "Email", type: "email" },
       password: { label: "Senha", type: "password" },
     },
-    async authorize(credentials) {
+    async authorize(credentials, request) {
       const email = credentials?.email as string | undefined;
       const password = credentials?.password as string | undefined;
       if (!email || !password) return null;
+      if (typeof email !== "string" || typeof password !== "string" || email.length > 254 || password.length > 256) return null;
+      const normalizedEmail = email.trim().toLowerCase();
+      const [ipLimit, accountLimit] = await Promise.all([
+        rateLimit(`login-ip:${clientIp(request.headers)}`, { limit: 30, windowMs: 15 * 60 * 1000 }),
+        rateLimit(`login-account:${normalizedEmail}`, { limit: 10, windowMs: 15 * 60 * 1000 }),
+      ]);
+      if (!ipLimit.success || !accountLimit.success) return null;
 
-      const user = await prisma.user.findUnique({ where: { email } });
+      const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
       if (!user || !user.passwordHash) return null;
-      if (user.blocked) throw new Error("CONTA_BLOQUEADA");
+      if (user.blocked) return null;
 
       const valid = await bcrypt.compare(password, user.passwordHash);
       if (!valid) return null;
@@ -71,16 +80,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.roleCheckedAt = Date.now();
       }
 
-      const roleCheckedAt = Number(token.roleCheckedAt ?? 0);
-      const shouldRefreshRole = token.id && Date.now() - roleCheckedAt > 5 * 60 * 1000;
-
-      if (shouldRefreshRole) {
+      if (token.id) {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
-            select: { role: true, blocked: true, name: true, image: true, restaurantId: true, isPlatformAdmin: true },
+            select: { role: true, blocked: true, name: true, image: true, restaurantId: true, isPlatformAdmin: true, passwordHash: true },
           });
-          if (dbUser) {
+          const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
+          if (!dbUser || !secret || dbUser.blocked) return null;
+          if (user) token.credentialVersion = credentialVersion(dbUser.passwordHash, secret);
+          if (!isValidSession(token.credentialVersion, dbUser.passwordHash, secret, dbUser.blocked)) return null;
             token.role = dbUser.role;
             token.blocked = dbUser.blocked;
             token.name = dbUser.name;
@@ -88,12 +97,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             token.restaurantId = dbUser.restaurantId;
             token.isPlatformAdmin = dbUser.isPlatformAdmin;
             token.roleCheckedAt = Date.now();
-          }
-        } catch (error) {
-          console.error("Falha ao atualizar a sessão; mantendo o token atual.", error);
+        } catch {
+          console.error("Session validation failed; access denied.");
+          return null;
         }
       }
-      return token;
+      return token.id ? token : null;
     },
     async session({ session, token }) {
       if (session.user) {

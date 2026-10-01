@@ -11,7 +11,8 @@ type CouponResult =
 export async function validateCouponAction(code: string, subtotal: number): Promise<CouponResult> {
   const session = await auth();
   const restaurant = await getPublicRestaurant();
-  if (!session?.user?.restaurantId || session.user.restaurantId !== restaurant.id) return { success: false, message: "Entre com uma conta desta hamburgueria." };
+  if (!session?.user?.id || session.user.blocked || !session.user.restaurantId || session.user.restaurantId !== restaurant.id) return { success: false, message: "Entre com uma conta desta hamburgueria." };
+  if (typeof code !== "string" || code.length > 50 || !Number.isFinite(subtotal) || subtotal < 0) return { success: false, message: "Dados inválidos." };
   const coupon = await prisma.coupon.findUnique({ where: { restaurantId_code: { restaurantId: restaurant.id, code: code.trim().toUpperCase() } } });
 
   if (!coupon || !coupon.active) {

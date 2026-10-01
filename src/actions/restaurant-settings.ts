@@ -8,12 +8,7 @@ import { requireRestaurantAdmin } from "@/lib/tenant";
 
 const settingsSchema = z.object({
   name: z.string().trim().min(3).max(80),
-  logoUrl: z.union([
-    z.string().trim().url(),
-    z.string().trim().startsWith("/"),
-    z.string().trim().startsWith("data:image/"),
-    z.literal(""),
-  ]),
+  logoUrl: z.string().trim().max(6 * 1024 * 1024).refine(value => !value || /^\/(?!\/)/.test(value) || /^https:\/\//i.test(value) || /^data:image\/(?:jpeg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(value), "Imagem inválida"),
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   description: z.string().trim().max(300),
   phone: z.string().trim().max(30),
@@ -23,7 +18,7 @@ const settingsSchema = z.object({
   address: z.string().trim().max(200),
   businessHours: z.string().trim().max(200),
   pixKey: z.string().trim().max(100),
-  customDomain: z.string().trim().toLowerCase().max(253),
+  customDomain: z.string().trim().toLowerCase().max(253).refine(value => !value || /^(?:https?:\/\/)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}\/?$/.test(value), "Domínio inválido"),
   deliveryFee: z.coerce.number().min(0).max(1000),
   storeCep: z.string().trim().regex(/^\d{5}-?\d{3}$/).or(z.literal("")),
   deliveryFeePerKm: z.coerce.number().min(0).max(100),
