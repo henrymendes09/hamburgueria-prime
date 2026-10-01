@@ -23,7 +23,7 @@ export default async function SuperAdminPage() {
       <section className="mt-8 rounded-2xl bg-zinc-900 p-6">
         <h2 className="text-2xl font-bold">Planos</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-3">{plans.map((plan) =>
-          <form action={updatePlanAction} className="rounded-xl border border-zinc-700 p-5" key={plan.id}>
+          <form action={updatePlanAction} className="rounded-xl border border-zinc-700 p-5" key={`${plan.id}:${plan.updatedAt.toISOString()}`}>
             <input type="hidden" name="id" value={plan.id} /><b>{plan.name}</b>
             <PlanField label="Preço mensal" name="monthlyPrice" value={plan.monthlyPrice} />
             <PlanField label="Preço anual" name="yearlyPrice" value={plan.yearlyPrice ?? plan.monthlyPrice * 10} />

@@ -126,6 +126,7 @@ export function CardapioManager({
                     </label>
                     <div className="flex gap-1">
                       <button
+                        aria-label={`Editar produto ${product.name}`}
                         onClick={() => setProductDialog({ open: true, product })}
                         className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-ink/5"
                       >
@@ -158,7 +159,7 @@ export function CardapioManager({
                   {cat.icon} {cat.name}
                 </span>
                 <div className="flex gap-1">
-                  <button onClick={() => setCategoryDialog({ open: true, category: cat })} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-ink/5">
+                  <button aria-label={`Editar categoria ${cat.name}`} onClick={() => setCategoryDialog({ open: true, category: cat })} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-ink/5">
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
                   <button onClick={() => handleDeleteCategory(cat.id)} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-flame/10 text-flame">
@@ -184,7 +185,7 @@ export function CardapioManager({
                   <p className="text-xs text-ash-light">{addon.type} · {formatMoney(addon.price)}</p>
                 </div>
                 <div className="flex gap-1">
-                  <button onClick={() => setAddonDialog({ open: true, addon })} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-ink/5">
+                  <button aria-label={`Editar adicional ${addon.name}`} onClick={() => setAddonDialog({ open: true, addon })} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-ink/5">
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
                   <button onClick={() => handleDeleteAddon(addon.id)} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-flame/10 text-flame">

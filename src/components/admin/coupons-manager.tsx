@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, Tag } from "lucide-react";
+import { Plus, Pencil, Trash2, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +34,7 @@ type Coupon = {
 
 const EMPTY = {
   code: "",
-  type: "PERCENTUAL" as const,
+  type: "PERCENTUAL" as "PERCENTUAL" | "VALOR",
   value: 10,
   maxUses: "" as string | number,
   minOrderValue: 0,
@@ -44,14 +44,26 @@ const EMPTY = {
 
 export function CouponsManager({ coupons }: { coupons: Coupon[] }) {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
   const [form, setForm] = useState(EMPTY);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  function openForm(coupon?: Coupon) {
+    setEditingCoupon(coupon ?? null);
+    setForm(coupon ? {
+      code: coupon.code, type: coupon.type, value: coupon.value,
+      maxUses: coupon.maxUses ?? "", minOrderValue: coupon.minOrderValue,
+      expiresAt: coupon.expiresAt.slice(0, 10), singleUsePerUser: coupon.singleUsePerUser,
+    } : { ...EMPTY });
+    setDialogOpen(true);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsSubmitting(true);
-    const result = await upsertCouponAction(null, {
+    const result = await upsertCouponAction(editingCoupon?.id ?? null, {
       ...form,
+      expiresAt: editingCoupon && form.expiresAt === editingCoupon.expiresAt.slice(0, 10) ? editingCoupon.expiresAt : form.expiresAt,
       maxUses: form.maxUses ? Number(form.maxUses) : null,
     });
     setIsSubmitting(false);
@@ -80,7 +92,7 @@ export function CouponsManager({ coupons }: { coupons: Coupon[] }) {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="font-display text-3xl text-ink">Gestão de Cupons</h1>
-        <Button onClick={() => setDialogOpen(true)} className="gap-2">
+        <Button onClick={() => openForm()} className="gap-2">
           <Plus className="h-4 w-4" /> Novo cupom
         </Button>
       </div>
@@ -95,9 +107,14 @@ export function CouponsManager({ coupons }: { coupons: Coupon[] }) {
                 </div>
                 <span className="font-mono font-bold text-sm">{coupon.code}</span>
               </div>
-              <button onClick={() => handleDelete(coupon.id)} className="text-ash-light hover:text-flame">
+              <div className="flex gap-3">
+              <button aria-label={`Editar cupom ${coupon.code}`} onClick={() => openForm(coupon)} className="text-ash-light hover:text-flame">
+                <Pencil className="h-4 w-4" />
+              </button>
+              <button aria-label={`Excluir cupom ${coupon.code}`} onClick={() => handleDelete(coupon.id)} className="text-ash-light hover:text-flame">
                 <Trash2 className="h-4 w-4" />
               </button>
+              </div>
             </div>
             <p className="font-display text-lg text-ink">
               {coupon.type === "PERCENTUAL" ? `${coupon.value}% OFF` : `R$ ${coupon.value.toFixed(2)} OFF`}
@@ -125,7 +142,7 @@ export function CouponsManager({ coupons }: { coupons: Coupon[] }) {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Novo cupom</DialogTitle>
+            <DialogTitle>{editingCoupon ? "Editar cupom" : "Novo cupom"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-4">
             <div>
@@ -170,7 +187,7 @@ export function CouponsManager({ coupons }: { coupons: Coupon[] }) {
               Cupom de uso único por cliente
             </label>
             <Button type="submit" disabled={isSubmitting} className="w-full">
-              {isSubmitting ? "Salvando..." : "Criar cupom"}
+              {isSubmitting ? "Salvando..." : editingCoupon ? "Salvar alterações" : "Criar cupom"}
             </Button>
           </form>
         </DialogContent>

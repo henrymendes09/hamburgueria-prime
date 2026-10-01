@@ -13,7 +13,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
     <div><h1 className="font-display text-3xl text-ink">Configurações</h1><p className="mt-1 normal-case text-ash">Personalize os dados visíveis na sua hamburgueria.</p></div>
     {params.salvo && <p className="rounded-xl bg-emerald-100 p-4 text-emerald-800">Configurações salvas.</p>}
     {params.erro && <p className="rounded-xl bg-red-100 p-4 text-red-800">Verifique os dados. O domínio pode já estar em uso.</p>}
-    <form action={updateRestaurantSettingsAction} noValidate className="grid gap-5 rounded-2xl bg-white p-6 md:grid-cols-2">
+    <form key={restaurant.updatedAt.toISOString()} action={updateRestaurantSettingsAction} noValidate className="grid gap-5 rounded-2xl bg-white p-6 md:grid-cols-2">
       <Field label="Nome da hamburgueria" name="name" value={restaurant.name} required />
       <RestaurantLogoField initialValue={restaurant.logoUrl ?? ""} />
       <Field label="Cor principal" name="primaryColor" value={restaurant.primaryColor} type="color" />

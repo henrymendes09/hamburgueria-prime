@@ -19,22 +19,25 @@ export async function upsertAddressAction(
     return { success: false, message: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
+  const saved = await prisma.$transaction(async tx => {
+  const owned = addressId ? await tx.address.findFirst({ where: { id: addressId, userId: session.user.id } }) : null;
+  if (addressId && !owned) return false;
   if (parsed.data.isDefault) {
-    await prisma.address.updateMany({
+    await tx.address.updateMany({
       where: { userId: session.user.id },
       data: { isDefault: false },
     });
   }
 
   if (addressId) {
-    const owned = await prisma.address.findFirst({
-      where: { id: addressId, userId: session.user.id },
-    });
-    if (!owned) return { success: false, message: "Endereço não encontrado." };
-    await prisma.address.update({ where: { id: addressId }, data: parsed.data });
+    const locationChanged = owned && (["cep", "street", "number", "neighborhood", "city", "state"] as const).some(key => owned[key] !== parsed.data[key]);
+    await tx.address.update({ where: { id: addressId, userId: session.user.id }, data: { ...parsed.data, ...(locationChanged ? { latitude: null, longitude: null } : {}) } });
   } else {
-    await prisma.address.create({ data: { ...parsed.data, userId: session.user.id } });
+    await tx.address.create({ data: { ...parsed.data, userId: session.user.id } });
   }
+  return true;
+  });
+  if (!saved) return { success: false, message: "Endereço não encontrado." };
 
   revalidatePath("/perfil/enderecos");
   return { success: true, message: "Endereço salvo." };

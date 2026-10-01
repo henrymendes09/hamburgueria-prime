@@ -119,7 +119,7 @@ export function CardManager({ cards }: { cards: CardModel[] }) {
           </div>
         </form>
       ) : (
-        <Button variant="outline" onClick={() => setShowForm(true)} className="gap-2">
+        <Button variant="outline" onClick={() => { setForm({ ...EMPTY }); setShowForm(true); }} className="gap-2">
           <Plus className="h-4 w-4" /> Adicionar cartão
         </Button>
       )}

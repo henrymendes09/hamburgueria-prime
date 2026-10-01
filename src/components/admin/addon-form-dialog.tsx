@@ -9,15 +9,21 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { upsertAddonAction } from "@/actions/products";
 
-export function AddonFormDialog({
-  open,
-  onOpenChange,
-  initialValues,
-}: {
+type AddonFormDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialValues?: { id: string; name: string; price: number; type: string };
-}) {
+};
+
+export function AddonFormDialog(props: AddonFormDialogProps) {
+  return props.open ? <AddonFormFields key={props.initialValues?.id ?? "new"} {...props} /> : null;
+}
+
+function AddonFormFields({
+  open,
+  onOpenChange,
+  initialValues,
+}: AddonFormDialogProps) {
   const [name, setName] = useState(initialValues?.name ?? "");
   const [price, setPrice] = useState(initialValues?.price ?? 0);
   const [type, setType] = useState(initialValues?.type ?? "EXTRA");
@@ -31,9 +37,6 @@ export function AddonFormDialog({
     if (result.success) {
       toast.success(result.message);
       onOpenChange(false);
-      setName("");
-      setPrice(0);
-      setType("EXTRA");
     } else {
       toast.error(result.message);
     }

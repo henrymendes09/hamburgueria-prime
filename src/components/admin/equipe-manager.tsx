@@ -43,7 +43,7 @@ export function EquipeManager({ staff: initial }: { staff: Staff[] }) {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="font-display text-3xl text-ink">Equipe</h1>
-        <Button onClick={() => setDialogOpen(true)} className="gap-2">
+        <Button onClick={() => { setForm({ name: "", email: "", password: "", role: "ADMIN" }); setDialogOpen(true); }} className="gap-2">
           <Plus className="h-4 w-4" /> Adicionar membro
         </Button>
       </div>

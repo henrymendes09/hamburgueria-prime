@@ -53,7 +53,7 @@ export function PwaManager() {
   }
 
   return (
-    <aside className="fixed bottom-4 left-4 right-4 z-[100] mx-auto flex max-w-lg items-center gap-3 rounded-2xl bg-ink p-4 text-paper shadow-2xl ring-1 ring-white/10">
+    <aside className="fixed bottom-4 left-4 right-4 z-40 mx-auto flex max-w-lg items-center gap-3 rounded-2xl bg-ink p-4 text-paper shadow-2xl ring-1 ring-white/10">
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-flame"><Download className="h-5 w-5" /></div>
       <div className="min-w-0 flex-1 normal-case">
         <p className="font-bold">Instalar aplicativo</p>

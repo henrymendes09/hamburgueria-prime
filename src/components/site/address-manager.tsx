@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Address } from "@prisma/client";
 import { toast } from "sonner";
-import { Plus, Trash2, MapPin, Star } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,16 +27,28 @@ const EMPTY = {
 export function AddressManager({ addresses }: { addresses: Address[] }) {
   const [showForm, setShowForm] = useState(addresses.length === 0);
   const [form, setForm] = useState(EMPTY);
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  function openForm(address?: Address) {
+    setEditingAddressId(address?.id ?? null);
+    setForm(address ? {
+      label: address.label, cep: address.cep, street: address.street, number: address.number,
+      complement: address.complement ?? "", neighborhood: address.neighborhood,
+      city: address.city, state: address.state, reference: address.reference ?? "", isDefault: address.isDefault,
+    } : { ...EMPTY });
+    setShowForm(true);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsSubmitting(true);
-    const result = await upsertAddressAction(null, form);
+    const result = await upsertAddressAction(editingAddressId, form);
     setIsSubmitting(false);
     if (result.success) {
       toast.success(result.message);
       setForm(EMPTY);
+      setEditingAddressId(null);
       setShowForm(false);
     } else {
       toast.error(result.message);
@@ -66,14 +78,20 @@ export function AddressManager({ addresses }: { addresses: Address[] }) {
               <p className="text-xs text-ash-light">{addr.cep}</p>
             </div>
           </div>
-          <button onClick={() => handleDelete(addr.id)} className="text-ash-light hover:text-flame">
+          <div className="flex gap-3">
+          <button aria-label={`Editar endereço ${addr.label}`} onClick={() => openForm(addr)} className="text-ash-light hover:text-flame">
+            <Pencil className="h-4 w-4" />
+          </button>
+          <button aria-label={`Excluir endereço ${addr.label}`} onClick={() => handleDelete(addr.id)} className="text-ash-light hover:text-flame">
             <Trash2 className="h-4 w-4" />
           </button>
+          </div>
         </div>
       ))}
 
       {showForm ? (
         <form onSubmit={handleSubmit} className="rounded-2xl border-2 border-ink/5 p-6 space-y-4">
+          <h3 className="font-bold">{editingAddressId ? "Editar endereço" : "Novo endereço"}</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label>Identificação</Label>
@@ -108,6 +126,10 @@ export function AddressManager({ addresses }: { addresses: Address[] }) {
               <Input maxLength={2} value={form.state} onChange={(e) => setForm((p) => ({ ...p, state: e.target.value.toUpperCase() }))} />
             </div>
           </div>
+          <div>
+            <Label>Referência (opcional)</Label>
+            <Input value={form.reference} onChange={(e) => setForm((p) => ({ ...p, reference: e.target.value }))} />
+          </div>
           <label className="flex items-center gap-2 text-sm text-ink cursor-pointer">
             <Checkbox checked={form.isDefault} onCheckedChange={(v) => setForm((p) => ({ ...p, isDefault: !!v }))} />
             Definir como endereço padrão
@@ -120,7 +142,7 @@ export function AddressManager({ addresses }: { addresses: Address[] }) {
           </div>
         </form>
       ) : (
-        <Button variant="outline" onClick={() => setShowForm(true)} className="gap-2">
+        <Button variant="outline" onClick={() => openForm()} className="gap-2">
           <Plus className="h-4 w-4" /> Adicionar endereço
         </Button>
       )}

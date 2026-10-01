@@ -8,15 +8,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { upsertCategoryAction } from "@/actions/products";
 
-export function CategoryFormDialog({
-  open,
-  onOpenChange,
-  initialValues,
-}: {
+type CategoryFormDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialValues?: { id: string; name: string; icon: string; order: number };
-}) {
+};
+
+export function CategoryFormDialog(props: CategoryFormDialogProps) {
+  return props.open ? <CategoryFormFields key={props.initialValues?.id ?? "new"} {...props} /> : null;
+}
+
+function CategoryFormFields({
+  open,
+  onOpenChange,
+  initialValues,
+}: CategoryFormDialogProps) {
   const [name, setName] = useState(initialValues?.name ?? "");
   const [icon, setIcon] = useState(initialValues?.icon ?? "🍔");
   const [order, setOrder] = useState(initialValues?.order ?? 0);
@@ -30,9 +36,6 @@ export function CategoryFormDialog({
     if (result.success) {
       toast.success(result.message);
       onOpenChange(false);
-      setName("");
-      setIcon("🍔");
-      setOrder(0);
     } else {
       toast.error(result.message);
     }

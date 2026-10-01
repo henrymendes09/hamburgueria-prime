@@ -15,7 +15,7 @@ export default async function PerfilPage() {
   return (
     <div className="rounded-2xl border-2 border-ink/5 p-6 max-w-lg">
       <h2 className="font-display text-xl text-ink mb-5">Dados pessoais</h2>
-      <ProfileForm user={toPublicUser(user)} />
+      <ProfileForm key={JSON.stringify(toPublicUser(user))} user={toPublicUser(user)} />
     </div>
   );
 }

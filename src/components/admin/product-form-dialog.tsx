@@ -46,19 +46,25 @@ const EMPTY: ProductFormValues = {
   addonIds: [],
 };
 
-export function ProductFormDialog({
-  open,
-  onOpenChange,
-  categories,
-  addons,
-  initialValues,
-}: {
+type ProductFormDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   categories: Category[];
   addons: Addon[];
   initialValues?: ProductFormValues;
-}) {
+};
+
+export function ProductFormDialog(props: ProductFormDialogProps) {
+  return props.open ? <ProductFormFields key={props.initialValues?.id ?? "new"} {...props} /> : null;
+}
+
+function ProductFormFields({
+  open,
+  onOpenChange,
+  categories,
+  addons,
+  initialValues,
+}: ProductFormDialogProps) {
   const [form, setForm] = useState<ProductFormValues>(initialValues ?? EMPTY);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -81,7 +87,6 @@ export function ProductFormDialog({
     if (result.success) {
       toast.success(result.message);
       onOpenChange(false);
-      setForm(EMPTY);
     } else {
       toast.error(result.message);
     }
