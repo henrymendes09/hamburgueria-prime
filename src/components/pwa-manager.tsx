@@ -50,8 +50,8 @@ export function PwaManager() {
   async function install() {
     if (!installPrompt) return;
     await installPrompt.prompt();
-    const choice = await installPrompt.userChoice;
-    if (choice.outcome === "accepted") dismiss();
+    await installPrompt.userChoice;
+    dismiss();
     setInstallPrompt(null);
   }
 

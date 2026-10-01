@@ -4,9 +4,9 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const route = vi.hoisted(() => ({ pathname: "/" }));
 vi.mock("next/navigation", () => ({ usePathname: () => route.pathname }));
 import { PwaManager } from "./pwa-manager";
-function prompt() {
+function prompt(outcome: "accepted" | "dismissed" = "accepted") {
   const event = new Event("beforeinstallprompt", { cancelable: true });
-  Object.assign(event, { prompt: vi.fn(), userChoice: Promise.resolve({ outcome: "accepted" }) });
+  Object.assign(event, { prompt: vi.fn(), userChoice: Promise.resolve({ outcome }) });
   act(() => { window.dispatchEvent(event); });
   return event;
 }
@@ -57,10 +57,10 @@ it("hides an already visible banner immediately when navigating to admin", async
   view.rerender(<PwaManager />);
   expect(screen.queryByText("Instalar aplicativo")).toBeNull();
 });
-it("remembers a successful installation for the session", async () => {
+it.each(["accepted", "dismissed"] as const)("remembers an installation choice of %s for the session", async outcome => {
   render(<PwaManager />);
   await act(async () => {});
-  prompt();
+  prompt(outcome);
   fireEvent.click(screen.getByRole("button", { name: "Instalar" }));
   await waitFor(() => expect(sessionStorage.getItem("pwa-install-dismissed")).toBe("1"));
   prompt();
