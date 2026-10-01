@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { User } from "@prisma/client";
+import type { PublicUser } from "@/lib/public-user";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { formatPhone, formatCPF } from "@/lib/utils";
 import { updateProfileAction } from "@/actions/profile";
 
-export function ProfileForm({ user }: { user: User }) {
+export function ProfileForm({ user }: { user: PublicUser }) {
   const [name, setName] = useState(user.name);
   const [phone, setPhone] = useState(user.phone ?? "");
   const [cpf, setCpf] = useState(user.cpf ?? "");

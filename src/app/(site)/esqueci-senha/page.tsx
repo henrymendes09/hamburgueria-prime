@@ -7,7 +7,7 @@ export default function EsqueciSenhaPage() {
   return (
     <AuthLayout
       title="Esqueci minha senha"
-      subtitle="Informe seu email e enviaremos as instruções de redefinição"
+      subtitle="Entre em contato com a loja para recuperar seu acesso"
     >
       <ForgotPasswordForm />
     </AuthLayout>

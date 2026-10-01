@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
@@ -16,7 +16,6 @@ type FormData = z.infer<typeof forgotPasswordSchema>;
 
 export function ForgotPasswordForm() {
   const [isPending, startTransition] = useTransition();
-  const [devLink, setDevLink] = useState<string | null>(null);
 
   const {
     register,
@@ -29,9 +28,6 @@ export function ForgotPasswordForm() {
       const result = await forgotPasswordAction(data);
       if (result.success) {
         toast.success(result.message);
-        if (result.devToken) {
-          setDevLink(`/redefinir-senha?token=${result.devToken}`);
-        }
       } else {
         toast.error(result.message);
       }
@@ -50,20 +46,6 @@ export function ForgotPasswordForm() {
           {isPending ? "Enviando..." : "Enviar instruções"}
         </Button>
       </form>
-
-      {devLink && (
-        <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800">
-          <p className="font-semibold mb-1">Modo desenvolvimento</p>
-          <p className="mb-2">
-            Nenhum provedor de email (SMTP/Resend/SendGrid) está configurado neste projeto, então o
-            link de redefinição é exibido aqui para você testar. Em produção, ele seria enviado por
-            email.
-          </p>
-          <Link href={devLink} className="font-bold underline">
-            Abrir link de redefinição
-          </Link>
-        </div>
-      )}
 
       <p className="text-center text-sm text-ash">
         Lembrou a senha?{" "}

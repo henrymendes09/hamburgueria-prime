@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { User, Address } from "@prisma/client";
+import type { Address } from "@prisma/client";
+import type { PublicUser } from "@/lib/public-user";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,7 +15,7 @@ import { checkoutAction, quoteDeliveryAction } from "@/actions/checkout";
 import { Truck, Store, Wallet, QrCode, CreditCard, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type UserWithAddresses = User & { addresses: Address[] };
+type UserWithAddresses = PublicUser & { addresses: Pick<Address, "id" | "label" | "street" | "number" | "neighborhood" | "city" | "state" | "cep" | "isDefault" | "complement">[] };
 
 export function CheckoutForm({ user }: { user: UserWithAddresses }) {
   const router = useRouter();
