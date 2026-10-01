@@ -34,8 +34,12 @@ export async function quoteDeliveryAction(input: {
 }): Promise<DeliveryQuoteResult> {
   const session = await auth();
   if (!session?.user?.id || session.user.blocked) return { success: false, message: "Faça login para calcular a entrega." };
+  if (!input || !Number.isFinite(input.subtotal) || input.subtotal < 0 || typeof input.addressId !== "undefined" && (typeof input.addressId !== "string" || input.addressId.length > 64) || typeof input.cep !== "undefined" && (typeof input.cep !== "string" || !/^\d{5}-?\d{3}$/.test(input.cep))) return { success: false, message: "Dados de entrega inválidos." };
+  const limited = await rateLimit(`delivery-quote:${session.user.id}`, { limit: 30, windowMs: 60000 });
+  if (!limited.success) return { success: false, message: "Aguarde antes de calcular a entrega novamente." };
 
   const restaurant = await getPublicRestaurant();
+  if (session.user.restaurantId !== restaurant.id) return { success: false, message: "Entre com uma conta desta hamburgueria." };
   if (!restaurant.storeCep) {
     const free = restaurant.freeDeliveryThreshold != null && input.subtotal >= restaurant.freeDeliveryThreshold;
     return {
@@ -237,6 +241,8 @@ export async function checkoutAction(
       if (coupon.singleUsePerUser && await prisma.couponRedemption.findFirst({ where: { couponId: coupon.id, userId: session.user.id } })) {
         return { success: false, message: "Você já utilizou este cupom." };
       }
+    } else {
+      return { success: false, message: "Cupom inválido, expirado ou sem usos disponíveis." };
     }
   }
 
@@ -302,7 +308,7 @@ export async function checkoutAction(
             productId: item.productId,
             productName: item.name,
             quantity: item.quantity,
-            unitPrice: Math.round((item.unitPrice + item.addons.reduce((sum, addon) => sum + addon.price, 0)) * 100) / 100,
+            unitPrice: (Math.round(item.unitPrice * 100) + item.addons.reduce((sum, addon) => sum + Math.round(addon.price * 100), 0)) / 100,
             addonsLabel: item.addons.map((a) => a.name).join(", ") || null,
             removedLabel: item.removedIngredients.join(", ") || null,
             notes: item.notes || null,

@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Formato de imagem não suportado." }, { status: 400 });
   }
   if (file.size > MAX_SIZE) {
-    return NextResponse.json({ error: "Imagem muito grande (máx. 5MB)." }, { status: 400 });
+    return NextResponse.json({ error: "Imagem muito grande (máx. 4MB)." }, { status: 400 });
   }
 
   const bytes = await file.arrayBuffer();

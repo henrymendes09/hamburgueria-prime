@@ -1,5 +1,5 @@
 security-audit
 security-audit-dependencies.json
-.env.docker
-.env.remote
+.env*
+!.env.example
 security-work*.log
