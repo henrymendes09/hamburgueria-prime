@@ -2,6 +2,8 @@ import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { Metadata } from "next";
+import { requireRestaurantAdmin } from "@/lib/tenant";
+import { MessageNotification } from "@/components/admin/message-notification";
 
 export async function generateMetadata(): Promise<Metadata> {
   const session = await auth();
@@ -19,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
+  const { session } = await requireRestaurantAdmin();
   const restaurant = session?.user?.restaurantId
     ? await prisma.restaurant.findUnique({ where: { id: session.user.restaurantId }, select: { slug: true, primaryColor: true } })
     : null;
@@ -28,10 +30,11 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
     : "#e01b22";
 
   return (
-    <div className="flex min-h-screen bg-paper-dim">
+    <div className="flex min-h-screen flex-col bg-paper-dim lg:flex-row">
       <style>{`:root{--color-flame:${primaryColor};--color-flame-dark:color-mix(in srgb,${primaryColor} 72%,black);--color-flame-light:color-mix(in srgb,${primaryColor} 72%,white)}`}</style>
       <AdminSidebar userName={session?.user?.name ?? "Admin"} restaurantSlug={restaurant?.slug} />
-      <main className="flex-1 p-4 sm:p-8 lg:ml-64">{children}</main>
+      <main className="min-w-0 flex-1 p-4 sm:p-8 lg:ml-64">{children}</main>
+      <MessageNotification accountKey={`${session.user.restaurantId}:${session.user.id}`} />
     </div>
   );
 }
