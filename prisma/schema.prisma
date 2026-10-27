@@ -21,6 +21,45 @@ model SecurityRateLimit {
   @@index([resetAt])
 }
 
+model AuditLog {
+  id           String   @id @default(cuid())
+  restaurantId String
+  actorUserId  String?
+  actorName    String?
+  actorRole    String?
+  resource     String
+  resourceId   String
+  action       String
+  changedFields String[] @default([])
+  before       Json?
+  after        Json?
+  createdAt    DateTime @default(now())
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  @@index([restaurantId, createdAt])
+}
+
+model OrderNotification {
+  id             String   @id @default(cuid())
+  restaurantId   String
+  userId         String
+  orderId        String
+  orderNumber    Int
+  status         String
+  title          String
+  message        String
+  read           Boolean  @default(false)
+  emailStatus    String   @default("PENDING")
+  emailAttempts  Int      @default(0)
+  lockedUntil    DateTime?
+  nextAttemptAt  DateTime @default(now())
+  sentAt         DateTime?
+  createdAt      DateTime @default(now())
+  restaurant     Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  @@unique([orderId, status])
+  @@index([restaurantId, userId, createdAt])
+  @@index([emailStatus, nextAttemptAt])
+}
+
 // ------------------------------------------------------------------
 // Autenticação / Usuários
 // ------------------------------------------------------------------
@@ -67,6 +106,7 @@ model Restaurant {
   address               String?
   businessHours         String?
   siteContent           Json?
+  operationSettings     Json?
   deliveryFee           Float            @default(0)
   storeCep              String?
   deliveryFeePerKm      Float            @default(1.5)
@@ -84,6 +124,8 @@ model Restaurant {
   coupons         Coupon[]
   orders          Order[]
   contactMessages ContactMessage[]
+  auditLogs       AuditLog[]
+  notifications   OrderNotification[]
   siteVisits      SiteVisit[]
   subscription    Subscription?
 }
@@ -443,6 +485,7 @@ model Order {
   scheduledFor       DateTime?
   paymentMethod      PaymentMethod
   paymentCardBrand   String?
+  paymentFee         Float?
   paymentStatus      PaymentStatus @default(PENDENTE)
   paymentExternalId  String?
   pixQrCode          String?

@@ -18,7 +18,13 @@ import { CARD_BRANDS, DELIVERY_PAYMENTS, type DeliveryPaymentMethod, isCardPayme
 
 type UserWithAddresses = PublicUser & { addresses: Pick<Address, "id" | "label" | "street" | "number" | "neighborhood" | "city" | "state" | "cep" | "isDefault" | "complement">[] };
 
-export function CheckoutForm({ user, onlinePixAvailable = false }: { user: UserWithAddresses; onlinePixAvailable?: boolean }) {
+export function CheckoutForm({ user, onlinePixAvailable = false, initialStoreOpen = false }: { user: UserWithAddresses; onlinePixAvailable?: boolean; initialStoreOpen?: boolean }) {
+  const [storeOpen, setStoreOpen] = useState(initialStoreOpen);
+  useEffect(() => {
+    const update = (event: Event) => setStoreOpen(Boolean((event as CustomEvent).detail.open));
+    window.addEventListener("hp-store-status", update);
+    return () => window.removeEventListener("hp-store-status", update);
+  }, []);
   const router = useRouter();
   const { items, coupon, clear } = useCartStore();
 
@@ -120,6 +126,7 @@ export function CheckoutForm({ user, onlinePixAvailable = false }: { user: UserW
   }
 
   async function handleSubmit() {
+    if (!storeOpen) { toast.error("A loja está fechada para novos pedidos. Confira os horários de funcionamento."); return; }
     if (items.length === 0) {
       toast.error("Seu carrinho está vazio.");
       return;
@@ -153,7 +160,7 @@ export function CheckoutForm({ user, onlinePixAvailable = false }: { user: UserW
         deliveryType,
         addressId: deliveryType === "ENTREGA" && !useNewAddress ? addressId : undefined,
         newAddress: deliveryType === "ENTREGA" && useNewAddress ? newAddress : undefined,
-        scheduledFor: scheduledFor || undefined,
+        scheduledFor: scheduledFor ? new Date(scheduledFor).toISOString() : undefined,
         paymentMethod,
         paymentCardBrand: isCardPayment(paymentMethod) ? paymentCardBrand : undefined,
         changeFor: paymentMethod === "DINHEIRO" && changeFor ? Number(changeFor) : undefined,
@@ -329,7 +336,7 @@ export function CheckoutForm({ user, onlinePixAvailable = false }: { user: UserW
           )}
 
           <div className="mt-4">
-            <Label>Agendar para (opcional)</Label>
+            <Label>Agendar para (opcional, horário do seu dispositivo)</Label>
             <Input
               type="datetime-local"
               value={scheduledFor}
@@ -432,8 +439,8 @@ export function CheckoutForm({ user, onlinePixAvailable = false }: { user: UserW
               <span className="text-right font-semibold text-ink">{paymentDescription({ paymentMethod, paymentCardBrand: isCardPayment(paymentMethod) ? paymentCardBrand : null, deliveryType })}</span>
             </div>
           </div>
-          <Button className="w-full mt-5" size="lg" onClick={handleSubmit} disabled={isSubmitting || deliveryQuoteLoading || (deliveryType === "ENTREGA" && !deliveryQuote)}>
-            {isSubmitting ? "Enviando pedido..." : paymentTiming === "AGORA" ? "Pagar agora com PIX" : "Confirmar pedido"}
+          <Button className="w-full mt-5" size="lg" onClick={handleSubmit} disabled={!storeOpen || isSubmitting || deliveryQuoteLoading || (deliveryType === "ENTREGA" && !deliveryQuote)}>
+            {!storeOpen ? "Loja fechada" : isSubmitting ? "Enviando pedido..." : paymentTiming === "AGORA" ? "Pagar agora com PIX" : "Confirmar pedido"}
           </Button>
         </div>
       </div>

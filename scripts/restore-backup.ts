@@ -21,6 +21,7 @@ async function main() {
   const db = new PrismaClient({ datasources: { db: { url: process.env.RESTORE_DATABASE_URL } } });
   try {
     await db.$transaction(async tx => {
+      await tx.$executeRaw`SELECT set_config('app.restore_mode', 'on', true)`;
       // Check every table, including excluded session tables, before writing anything.
       for (const model of models) {
         const name = (model.dbName ?? model.name).replaceAll('"', '""');

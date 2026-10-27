@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRestaurantAdmin } from "@/lib/tenant";
 import { RestaurantLogoField } from "@/components/admin/restaurant-logo-field";
 import { SettingsSubmitButton } from "@/components/admin/settings-submit-button";
+import Link from "next/link";
 
 export const metadata = { title: "Configurações da loja" };
 
@@ -23,7 +24,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
       <Field label="E-mail comercial" name="email" value={restaurant.email ?? ""} type="email" />
       <Field label="CNPJ" name="cnpj" value={restaurant.cnpj ?? ""} />
       <Field label="Endereço" name="address" value={restaurant.address ?? ""} />
-      <Field label="Horários" name="businessHours" value={restaurant.businessHours ?? ""} placeholder="Terça a domingo, 18h às 23h" />
+      <div><input type="hidden" name="businessHours" value={restaurant.businessHours ?? ""} /><Link href="/admin/funcionamento" className="text-sm font-bold text-flame">Configurar dias, horários e prazo de entrega →</Link></div>
       <Field label="Chave PIX" name="pixKey" value={restaurant.pixKey ?? ""} />
       <Field label="CEP da loja" name="storeCep" value={restaurant.storeCep ?? ""} placeholder="00000-000" required />
       <Field label="Taxa base de entrega" name="deliveryFee" value={restaurant.deliveryFee} type="number" step="0.01" required />

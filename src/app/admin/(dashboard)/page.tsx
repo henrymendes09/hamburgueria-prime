@@ -31,7 +31,7 @@ export default async function AdminDashboardPage() {
         where: { restaurantId, status: { in: ["RECEBIDO", "ACEITO", "PREPARANDO", "SAIU_PARA_ENTREGA"] } },
       }),
       prisma.order.aggregate({
-        where: { restaurantId, createdAt: { gte: startOfToday }, status: { not: "CANCELADO" } },
+        where: { restaurantId, createdAt: { gte: startOfToday }, status: { notIn: ["CANCELADO", "RECUSADO"] }, paymentStatus: "PAGO" },
         _sum: { total: true },
       }),
       prisma.user.count({ where: { restaurantId, role: "CLIENTE" } }),
@@ -45,7 +45,8 @@ export default async function AdminDashboardPage() {
         where: {
           restaurantId,
           createdAt: { gte: sevenDaysAgo },
-          status: { not: "CANCELADO" },
+          status: { notIn: ["CANCELADO", "RECUSADO"] },
+          paymentStatus: "PAGO",
         },
         select: { createdAt: true, total: true },
       }),

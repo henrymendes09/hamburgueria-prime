@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth";
 import { CheckoutForm } from "@/components/site/checkout-form";
 import { publicUserSelect, toPublicUser } from "@/lib/public-user";
 import { redirect } from "next/navigation";
+import { getPublicRestaurant } from "@/lib/tenant";
+import { storeStatus } from "@/lib/store-hours";
 
 export const metadata = { title: "Finalizar pedido" };
 
@@ -14,11 +16,12 @@ export default async function CheckoutPage() {
     select: { ...publicUserSelect, addresses: { orderBy: { isDefault: "desc" }, select: { id: true, label: true, street: true, number: true, neighborhood: true, city: true, state: true, cep: true, isDefault: true, complement: true } } },
   });
   if (!user) redirect("/login?callbackUrl=%2Fcheckout");
+  const restaurant = await getPublicRestaurant();
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
       <h1 className="font-display text-3xl text-ink mb-8 sm:text-4xl">Finalizar pedido</h1>
-      <CheckoutForm user={{ ...toPublicUser(user), addresses: user.addresses }} onlinePixAvailable={Boolean(process.env.MERCADOPAGO_ACCESS_TOKEN && process.env.MERCADOPAGO_WEBHOOK_SECRET)} />
+      <CheckoutForm user={{ ...toPublicUser(user), addresses: user.addresses }} initialStoreOpen={storeStatus(restaurant.operationSettings).open} onlinePixAvailable={Boolean(process.env.MERCADOPAGO_ACCESS_TOKEN && process.env.MERCADOPAGO_WEBHOOK_SECRET)} />
     </div>
   );
 }

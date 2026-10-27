@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 const m = vi.hoisted(() => ({ auth: vi.fn(), categoryUpdate: vi.fn(), addonUpdate: vi.fn(), categoryFind: vi.fn(), addonCount: vi.fn(), transaction: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ auth: m.auth }));
+vi.mock("@/lib/audit", () => ({ audited: async (_session: unknown, work: (tx: unknown) => unknown) => work((await import("@/lib/prisma")).prisma) }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({ prisma: { category: { updateMany: m.categoryUpdate, findFirst: m.categoryFind }, addon: { updateMany: m.addonUpdate, count: m.addonCount }, $transaction: m.transaction } }));
 import { upsertCategoryAction, upsertAddonAction, upsertProductAction } from "./products";

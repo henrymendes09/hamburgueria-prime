@@ -15,7 +15,7 @@ export const siteContentSchema = z.object({
     if (/^\/(?!\/)/.test(value) && !value.includes("\\")) return true;
     try { const url = new URL(value); return url.protocol === "https:" && !url.username && !url.password && ["images.unsplash.com", "plus.unsplash.com", "fegqgvky55odqiiv.public.blob.vercel-storage.com"].includes(url.hostname); } catch { return false; }
   }, "Use uma imagem enviada pelo painel ou uma URL de imagem permitida."),
-  imageAlt: text(200), addressLabel: text(100), address: text(300), hoursLabel: text(100), hours: text(300),
+  imageAlt: text(200), addressLabel: text(100), address: text(300), hoursLabel: text(100), hours: text(2000),
   faqTitle: text(150).min(1), faqs: z.array(z.object({ q: text(300).min(3), a: text(4000).min(3) })).max(50),
 });
 export type SiteContent = z.infer<typeof siteContentSchema>;

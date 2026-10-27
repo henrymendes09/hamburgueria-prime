@@ -1,4 +1,5 @@
 "use server";
+import { audited } from "@/lib/audit";
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
@@ -20,15 +21,16 @@ async function requireAdmin() {
     throw new Error("Não autorizado.");
   }
   if (!session.user.restaurantId) throw new Error("Empresa não identificada.");
-  return session.user.restaurantId;
+  return session;
 }
 
 export async function toggleCustomerBlockAction(
   userId: string,
   blocked: boolean
 ): Promise<ActionResult> {
-  const restaurantId = await requireAdmin();
-  await prisma.user.updateMany({ where: { id: userId, restaurantId, role: "CLIENTE" }, data: { blocked } });
+  const session = await requireAdmin();
+  const restaurantId = session.user.restaurantId!;
+  await audited(session, tx => tx.user.updateMany({ where: { id: userId, restaurantId, role: "CLIENTE" }, data: { blocked } }));
   revalidatePath("/admin/clientes");
   return { success: true, message: blocked ? "Cliente bloqueado." : "Cliente desbloqueado." };
 }
@@ -36,7 +38,8 @@ export async function toggleCustomerBlockAction(
 export async function createStaffAction(
   input: { name: string; email: string; password: string; role: "ADMIN" | "ENTREGADOR" }
 ): Promise<ActionResult> {
-  const restaurantId = await requireAdmin();
+  const session = await requireAdmin();
+  const restaurantId = session.user.restaurantId!;
   const bcrypt = await import("bcryptjs");
   const parsed = staffSchema.safeParse(input);
   if (!parsed.success) return { success: false, message: "Dados da equipe inválidos. Use uma senha com pelo menos 10 caracteres." };
@@ -61,7 +64,7 @@ export async function createStaffAction(
   if (existing) return { success: false, message: "Email já cadastrado." };
 
   const passwordHash = await bcrypt.default.hash(input.password, 10);
-  await prisma.user.create({
+  await audited(session, tx => tx.user.create({
     data: {
       name: input.name,
       email: input.email,
@@ -69,7 +72,7 @@ export async function createStaffAction(
       role: input.role,
       restaurantId,
     },
-  });
+  }));
   revalidatePath("/admin/equipe");
   return { success: true, message: "Usuário da equipe criado." };
 }

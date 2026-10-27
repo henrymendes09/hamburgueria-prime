@@ -9,6 +9,7 @@ import { ProductCard } from "@/components/site/product-card";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { getPublicRestaurant } from "@/lib/tenant";
+import { storeStatus } from "@/lib/store-hours";
 
 export default async function HomePage() {
   const session = await auth();
@@ -64,7 +65,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <Hero />
+      <Hero deliveryEstimate={storeStatus(restaurant.operationSettings).deliveryEstimate} />
       <CategoryStrip />
 
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">

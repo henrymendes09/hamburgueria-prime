@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requirePlatformAdmin } from "@/lib/tenant";
+import { audited } from "@/lib/audit";
 
 export async function setRestaurantStatusAction(formData: FormData) {
-  await requirePlatformAdmin();
+  const session = await requirePlatformAdmin();
   const id = String(formData.get("id") || "");
   const status = String(formData.get("status") || "");
   if (!id || !["ACTIVE", "SUSPENDED"].includes(status)) return;
-  await prisma.restaurant.update({ where: { id }, data: { status: status as "ACTIVE" | "SUSPENDED" } });
+  await audited(session, tx => tx.restaurant.update({ where: { id }, data: { status: status as "ACTIVE" | "SUSPENDED" } }));
   revalidatePath("/super-admin");
 }
 

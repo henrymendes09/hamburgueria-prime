@@ -16,6 +16,8 @@ import {
   ExternalLink,
   MessageSquare,
   FilePenLine,
+  Clock,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +29,8 @@ const LINKS = [
   { href: "/admin/clientes", label: "Clientes", icon: Users },
   { href: "/admin/mensagens", label: "Mensagens", icon: MessageSquare },
   { href: "/admin/conteudo", label: "Conteúdo do site", icon: FilePenLine },
+  { href: "/admin/funcionamento", label: "Funcionamento", icon: Clock },
+  { href: "/admin/historico", label: "Histórico de ações", icon: History },
   { href: "/admin/financeiro", label: "Financeiro", icon: BarChart3 },
   { href: "/admin/equipe", label: "Equipe", icon: UserCog },
   { href: "/admin/configuracoes", label: "Configurações", icon: Settings },

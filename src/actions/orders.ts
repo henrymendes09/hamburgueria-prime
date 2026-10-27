@@ -1,4 +1,7 @@
 "use server";
+import { audited } from "@/lib/audit";
+import { after } from "next/server";
+import { deliverOrderEmails } from "@/lib/order-notifications";
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
@@ -50,7 +53,7 @@ export async function updateOrderStatusAction(
     catch { return { success: false, message: "Não foi possível confirmar o cancelamento ou estorno no Mercado Pago. Tente novamente ou confira o pagamento no provedor." }; }
   }
 
-  await prisma.order.update({
+  await audited(session, tx => tx.order.update({
     where: { id: orderId, restaurantId: session.user.restaurantId!, status: order.status },
     data: {
       status: newStatus as never,
@@ -60,7 +63,8 @@ export async function updateOrderStatusAction(
         newStatus === "ENTREGUE" && order.paymentMethod !== "PIX" ? "PAGO" : paymentStatus,
       statusLog: { create: { status: newStatus as never } },
     },
-  });
+  }));
+  after(() => deliverOrderEmails({ restaurantId: session.user.restaurantId!, orderId }));
 
   emitOrderEvent({ type: "status-update", restaurantId: order.restaurantId, orderId, status: newStatus });
   revalidatePath("/admin/pedidos");
@@ -76,7 +80,8 @@ export async function assignEntregadorAction(
   const restaurantId = session.user.restaurantId!;
   const entregador = await prisma.user.findFirst({ where: { id: entregadorId, restaurantId, role: "ENTREGADOR" } });
   if (!entregador || entregador.blocked) return { success: false, message: "Entregador não encontrado." };
-  await prisma.order.updateMany({ where: { id: orderId, restaurantId }, data: { entregadorId } });
+  await audited(session, tx => tx.order.updateMany({ where: { id: orderId, restaurantId }, data: { entregadorId } }));
+  after(() => deliverOrderEmails({ restaurantId: session.user.restaurantId!, orderId }));
   revalidatePath("/admin/pedidos");
   return { success: true, message: "Entregador atribuído." };
 }
@@ -97,8 +102,8 @@ export async function entregadorUpdateStatusAction(
 
   if (!(NEXT_STATUS[order.status] ?? []).includes(newStatus)) return { success: false, message: "Transição de status inválida." };
 
-  await prisma.order.update({
-    where: { id: orderId, restaurantId: session.user.restaurantId, entregadorId: session.user.id, status: order.status },
+  await audited(session, tx => tx.order.update({
+    where: { id: orderId, restaurantId: session.user.restaurantId!, entregadorId: session.user.id, status: order.status },
     data: {
       status: newStatus,
       deliveredAt: newStatus === "ENTREGUE" ? new Date() : order.deliveredAt,
@@ -106,7 +111,8 @@ export async function entregadorUpdateStatusAction(
         newStatus === "ENTREGUE" && order.paymentMethod !== "PIX" ? "PAGO" : order.paymentStatus,
       statusLog: { create: { status: newStatus } },
     },
-  });
+  }));
+  after(() => deliverOrderEmails({ restaurantId: session.user.restaurantId!, orderId }));
 
   revalidatePath("/entregador");
   return { success: true, message: "Status atualizado." };

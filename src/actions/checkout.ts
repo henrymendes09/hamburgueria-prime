@@ -1,4 +1,7 @@
 "use server";
+import { validateOrderSchedule, OrderingClosedError } from "@/lib/store-hours";
+import { after } from "next/server";
+import { deliverOrderEmails } from "@/lib/order-notifications";
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
@@ -155,6 +158,8 @@ export async function checkoutAction(
     return { success: false, message: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
   const data = parsed.data;
+  const hoursError = validateOrderSchedule(activeRestaurant.operationSettings, data.scheduledFor);
+  if (hoursError) return { success: false, message: hoursError };
 
   // Revalida preços/disponibilidade no servidor (nunca confia no preço vindo do cliente)
   const productIds = selections.data.map((i) => i.productId);
@@ -278,6 +283,9 @@ export async function checkoutAction(
   order = await prisma.$transaction(async (tx) => {
     // Serialize order numbering for this tenant and coupon consumption across instances.
     await tx.$queryRaw`SELECT "id" FROM "Restaurant" WHERE "id" = ${restaurantId} FOR UPDATE`;
+    const currentStore = await tx.restaurant.findUniqueOrThrow({ where: { id: restaurantId }, select: { operationSettings: true } });
+    const closed = validateOrderSchedule(currentStore.operationSettings, data.scheduledFor);
+    if (closed) throw new OrderingClosedError(closed);
     if (couponId && selectedCoupon) {
       await tx.$queryRaw`SELECT "id" FROM "Coupon" WHERE "id" = ${couponId} FOR UPDATE`;
       const current = await tx.coupon.findFirst({ where: { id: couponId, restaurantId, active: true, expiresAt: { gt: new Date() } } });
@@ -350,15 +358,16 @@ export async function checkoutAction(
 
     return created;
   }, { timeout: 15000 });
-  } catch {
+  } catch (error) {
     if (pixPayment) {
       try { await cancelOrRefundPayment({ id: orderId, total, paymentExternalId: pixPayment.id }); }
       catch { console.error("orphan_payment_compensation_failed", { orderId, paymentId: pixPayment.id }); }
     }
-    return { success: false, message: "Não foi possível concluir o pedido. Verifique seu cupom e tente novamente." };
+    return { success: false, message: error instanceof OrderingClosedError ? error.message : "Não foi possível concluir o pedido. Verifique seu cupom e tente novamente." };
   }
 
   emitOrderEvent({ type: "new-order", restaurantId, orderId: order.id, orderNumber: order.number });
+  after(() => deliverOrderEmails({ restaurantId, orderId: order.id }));
 
   return { success: true, orderId: order.id, orderNumber: order.number };
 }

@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
+
 import { requireRestaurantAdmin } from "@/lib/tenant";
+import { audited } from "@/lib/audit";
 
 const settingsSchema = z.object({
   name: z.string().trim().min(3).max(80),
@@ -16,7 +17,7 @@ const settingsSchema = z.object({
   email: z.string().trim().email().or(z.literal("")),
   cnpj: z.string().trim().max(30),
   address: z.string().trim().max(200),
-  businessHours: z.string().trim().max(200),
+  businessHours: z.string().trim().max(2000),
   pixKey: z.string().trim().max(100),
   customDomain: z.string().trim().toLowerCase().max(253).refine(value => !value || /^(?:https?:\/\/)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}\/?$/.test(value), "Domínio inválido"),
   deliveryFee: z.coerce.number().min(0).max(1000),
@@ -27,12 +28,12 @@ const settingsSchema = z.object({
 });
 
 export async function updateRestaurantSettingsAction(formData: FormData) {
-  const { restaurantId } = await requireRestaurantAdmin();
+  const { session, restaurantId } = await requireRestaurantAdmin();
   const parsed = settingsSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect("/admin/configuracoes?erro=dados");
   const data = parsed.data;
   try {
-    await prisma.restaurant.update({
+    await audited(session, tx => tx.restaurant.update({
       where: { id: restaurantId },
       data: {
         ...data,
@@ -42,7 +43,7 @@ export async function updateRestaurantSettingsAction(formData: FormData) {
         storeCep: data.storeCep || null,
         freeDeliveryThreshold: data.freeDeliveryThreshold === "" ? null : data.freeDeliveryThreshold,
       },
-    });
+    }));
   } catch {
     redirect("/admin/configuracoes?erro=dominio");
   }

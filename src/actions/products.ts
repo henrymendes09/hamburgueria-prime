@@ -1,4 +1,5 @@
 "use server";
+import { audited } from "@/lib/audit";
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
@@ -14,14 +15,15 @@ async function requireAdmin() {
     throw new Error("Não autorizado.");
   }
   if (!session.user.restaurantId) throw new Error("Empresa não identificada.");
-  return session.user.restaurantId;
+  return session;
 }
 
 export async function upsertProductAction(
   productId: string | null,
   input: unknown
 ): Promise<ActionResult> {
-  const restaurantId = await requireAdmin();
+  const session = await requireAdmin();
+  const restaurantId = session.user.restaurantId!;
   const parsed = productSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, message: parsed.error.issues[0]?.message ?? "Dados inválidos." };
@@ -49,7 +51,7 @@ export async function upsertProductAction(
     featured: data.featured ?? false,
   };
 
-  const product = await prisma.$transaction(async (tx) => {
+  const product = await audited(session, async (tx) => {
   let product;
   if (productId) {
     product = await tx.product.update({ where: { id: productId, restaurantId }, data: payload });
@@ -73,8 +75,9 @@ export async function upsertProductAction(
 }
 
 export async function deleteProductAction(productId: string): Promise<ActionResult> {
-  const restaurantId = await requireAdmin();
-  await prisma.product.deleteMany({ where: { id: productId, restaurantId } });
+  const session = await requireAdmin();
+  const restaurantId = session.user.restaurantId!;
+  await audited(session, tx => tx.product.deleteMany({ where: { id: productId, restaurantId } }));
   revalidatePath("/admin/cardapio");
   revalidatePath("/cardapio");
   return { success: true, message: "Produto removido." };
@@ -84,8 +87,9 @@ export async function toggleProductAvailabilityAction(
   productId: string,
   available: boolean
 ): Promise<ActionResult> {
-  const restaurantId = await requireAdmin();
-  await prisma.product.updateMany({ where: { id: productId, restaurantId }, data: { available } });
+  const session = await requireAdmin();
+  const restaurantId = session.user.restaurantId!;
+  await audited(session, tx => tx.product.updateMany({ where: { id: productId, restaurantId }, data: { available } }));
   revalidatePath("/admin/cardapio");
   revalidatePath("/cardapio");
   return { success: true, message: "Disponibilidade atualizada." };
@@ -95,20 +99,21 @@ export async function upsertCategoryAction(
   categoryId: string | null,
   input: unknown
 ): Promise<ActionResult> {
-  const restaurantId = await requireAdmin();
+  const session = await requireAdmin();
+  const restaurantId = session.user.restaurantId!;
   const parsed = categorySchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, message: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
   const slug = slugify(parsed.data.name);
   if (categoryId) {
-    const result = await prisma.category.updateMany({
+    const result = await audited(session, tx => tx.category.updateMany({
       where: { id: categoryId, restaurantId },
       data: { ...parsed.data, slug },
-    });
+    }));
     if (!result.count) return { success: false, message: "Categoria não encontrada." };
   } else {
-    await prisma.category.create({ data: { ...parsed.data, slug, restaurantId } });
+    await audited(session, tx => tx.category.create({ data: { ...parsed.data, slug, restaurantId } }));
   }
   revalidatePath("/admin/cardapio");
   revalidatePath("/cardapio");
@@ -116,12 +121,13 @@ export async function upsertCategoryAction(
 }
 
 export async function deleteCategoryAction(categoryId: string): Promise<ActionResult> {
-  const restaurantId = await requireAdmin();
+  const session = await requireAdmin();
+  const restaurantId = session.user.restaurantId!;
   const inUse = await prisma.product.count({ where: { categoryId, restaurantId } });
   if (inUse > 0) {
     return { success: false, message: "Não é possível excluir: existem produtos nesta categoria." };
   }
-  await prisma.category.deleteMany({ where: { id: categoryId, restaurantId } });
+  await audited(session, tx => tx.category.deleteMany({ where: { id: categoryId, restaurantId } }));
   revalidatePath("/admin/cardapio");
   return { success: true, message: "Categoria removida." };
 }
@@ -130,24 +136,26 @@ export async function upsertAddonAction(
   addonId: string | null,
   input: unknown
 ): Promise<ActionResult> {
-  const restaurantId = await requireAdmin();
+  const session = await requireAdmin();
+  const restaurantId = session.user.restaurantId!;
   const parsed = addonSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, message: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
   if (addonId) {
-    const result = await prisma.addon.updateMany({ where: { id: addonId, restaurantId }, data: parsed.data });
+    const result = await audited(session, tx => tx.addon.updateMany({ where: { id: addonId, restaurantId }, data: parsed.data }));
     if (!result.count) return { success: false, message: "Adicional não encontrado." };
   } else {
-    await prisma.addon.create({ data: { ...parsed.data, restaurantId } });
+    await audited(session, tx => tx.addon.create({ data: { ...parsed.data, restaurantId } }));
   }
   revalidatePath("/admin/cardapio");
   return { success: true, message: "Adicional salvo." };
 }
 
 export async function deleteAddonAction(addonId: string): Promise<ActionResult> {
-  const restaurantId = await requireAdmin();
-  await prisma.addon.deleteMany({ where: { id: addonId, restaurantId } });
+  const session = await requireAdmin();
+  const restaurantId = session.user.restaurantId!;
+  await audited(session, tx => tx.addon.deleteMany({ where: { id: addonId, restaurantId } }));
   revalidatePath("/admin/cardapio");
   return { success: true, message: "Adicional removido." };
 }

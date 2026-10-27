@@ -1,143 +1,26 @@
 "use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { paymentDescription } from "@/lib/payment-options";
-
-import { FileSpreadsheet, FileText, DollarSign, ShoppingBag, TrendingUp } from "lucide-react";
+import { formatMoney, ORDER_STATUS_LABEL } from "@/lib/utils";
+import type { summarizeFinancialOrders } from "@/lib/financial-report";
+import { saveOrderFeeAction } from "@/actions/financial";
 import { Button } from "@/components/ui/button";
-import { formatMoney, formatDateTime, ORDER_STATUS_LABEL } from "@/lib/utils";
-
-type OrderRow = {
-  number: number;
-  customer: string;
-  status: string;
-  total: number;
-  paymentMethod: string;
-  paymentCardBrand?: string | null;
-  deliveryType?: string;
-  createdAt: string;
-};
-
-export function FinanceiroManager({
-  summary,
-  topProducts,
-  orders,
-}: {
-  summary: { totalRevenue: number; totalOrders: number; avgTicket: number };
-  topProducts: { name: string; qty: number; revenue: number }[];
-  orders: OrderRow[];
-}) {
-  function exportCSV() {
-    const header = ["Pedido", "Cliente", "Status", "Pagamento", "Total", "Data"];
-    const rows = orders.map((o) => [
-      `#${o.number}`,
-      o.customer,
-      ORDER_STATUS_LABEL[o.status],
-      paymentDescription(o),
-      o.total.toFixed(2).replace(".", ","),
-      formatDateTime(o.createdAt),
-    ]);
-    const csvContent = [header, ...rows].map((r) => r.map((c) => `"${c}"`).join(";")).join("\n");
-    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `relatorio-hamburgueria-prime-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+type OrderRow = { id: string; number: number; customer: string; status: string; paymentStatus: string; total: number; subtotal: number; deliveryFee: number; discount: number; deliveryPayout: number; paymentFee: number | null; paymentMethod: string; paymentCardBrand?: string | null; deliveryType?: string; createdAt: string };
+export function FinanceiroManager({ summary, topProducts, orders, period }: { summary: ReturnType<typeof summarizeFinancialOrders>; topProducts: { name: string; qty: number; revenue: number }[]; orders: OrderRow[]; period: { from: string; to: string } }) {
+  const router = useRouter(), [saving, setSaving] = useState<string | null>(null);
+  async function fee(event: React.FormEvent<HTMLFormElement>, id: string) {
+    event.preventDefault(); const raw = String(new FormData(event.currentTarget).get("fee") ?? ""); setSaving(id);
+    try { const result = await saveOrderFeeAction(id, raw === "" ? null : Number(raw)); if (result.success) { toast.success(result.message); router.refresh(); } else toast.error(result.message); } catch { toast.error("Não foi possível salvar a taxa."); } finally { setSaving(null); }
   }
-
-  function exportPDF() {
-    window.print();
-  }
-
-  return (
-    <div>
-      <div className="mb-6 flex items-center justify-between flex-wrap gap-4 print:hidden">
-        <h1 className="font-display text-3xl text-ink">Financeiro</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5">
-            <FileSpreadsheet className="h-4 w-4" /> Exportar Excel
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportPDF} className="gap-1.5">
-            <FileText className="h-4 w-4" /> Exportar PDF
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-3 mb-8">
-        <div className="rounded-2xl bg-white p-5 border-2 border-ink/5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500 text-white mb-3">
-            <DollarSign className="h-5 w-5" />
-          </div>
-          <p className="font-display text-2xl text-ink">{formatMoney(summary.totalRevenue)}</p>
-          <p className="text-xs text-ash-light uppercase font-bold">Faturamento total</p>
-        </div>
-        <div className="rounded-2xl bg-white p-5 border-2 border-ink/5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 text-white mb-3">
-            <ShoppingBag className="h-5 w-5" />
-          </div>
-          <p className="font-display text-2xl text-ink">{summary.totalOrders}</p>
-          <p className="text-xs text-ash-light uppercase font-bold">Pedidos</p>
-        </div>
-        <div className="rounded-2xl bg-white p-5 border-2 border-ink/5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-flame text-white mb-3">
-            <TrendingUp className="h-5 w-5" />
-          </div>
-          <p className="font-display text-2xl text-ink">{formatMoney(summary.avgTicket)}</p>
-          <p className="text-xs text-ash-light uppercase font-bold">Ticket médio</p>
-        </div>
-      </div>
-
-      <div className="rounded-2xl bg-white border-2 border-ink/5 p-6 mb-8">
-        <h2 className="font-display text-lg text-ink mb-4">Produtos mais vendidos</h2>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-xs uppercase text-ash-light border-b border-ink/5">
-              <th className="pb-2">Produto</th>
-              <th className="pb-2">Qtd. vendida</th>
-              <th className="pb-2">Receita</th>
-            </tr>
-          </thead>
-          <tbody>
-            {topProducts.map((p) => (
-              <tr key={p.name} className="border-b border-ink/5 last:border-0">
-                <td className="py-2 normal-case font-semibold text-ink">{p.name}</td>
-                <td className="py-2">{p.qty}</td>
-                <td className="py-2">{formatMoney(p.revenue)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="rounded-2xl bg-white border-2 border-ink/5 p-6">
-        <h2 className="font-display text-lg text-ink mb-4">Pedidos recentes</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs uppercase text-ash-light border-b border-ink/5">
-                <th className="pb-2">Pedido</th>
-                <th className="pb-2">Cliente</th>
-                <th className="pb-2">Status</th>
-                <th className="pb-2">Pagamento</th>
-                <th className="pb-2">Total</th>
-                <th className="pb-2">Data</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((o) => (
-                <tr key={o.number} className="border-b border-ink/5 last:border-0">
-                  <td className="py-2 font-semibold">#{o.number}</td>
-                  <td className="py-2 normal-case">{o.customer}</td>
-                  <td className="py-2 normal-case">{ORDER_STATUS_LABEL[o.status]}</td>
-                  <td className="py-2 normal-case">{paymentDescription(o)}</td>
-                  <td className="py-2">{formatMoney(o.total)}</td>
-                  <td className="py-2 text-xs text-ash-light normal-case">{formatDateTime(o.createdAt)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
+  const cards = [
+    ["Recebido", summary.received], ["Pendente de recebimento", summary.pending], ["Produtos: valor bruto dos pedidos válidos", summary.grossProducts], ["Frete cobrado nos pedidos válidos", summary.deliveryFees], ["Descontos dos pedidos válidos", summary.discounts], ["Valor dos cancelados/recusados", summary.cancelled], ["Estornos confirmados", summary.refunded], ["Pagamentos com falha", summary.failed], ["Repasses das entregas concluídas", summary.driverPayouts], ["Taxas de pagamento informadas", summary.paymentFees], ["Recebido menos taxas informadas e repasses", summary.netAfterKnownCosts], ["Ticket médio dos pedidos pagos", summary.avgTicket],
+  ] as const;
+  return <div className="space-y-6 normal-case"><div className="flex flex-wrap gap-3 print:hidden"><a href={`/api/admin/financeiro/export?de=${period.from}&ate=${period.to}`} className="rounded-full border-2 border-ink/10 bg-white px-4 py-2 text-sm font-bold">Exportar período completo (CSV/Excel)</a><Button variant="outline" onClick={() => window.print()}>Imprimir página / PDF</Button></div><p className="text-sm text-ash">{summary.totalOrders} pedidos · {summary.paidOrders} pagos e válidos · {summary.cancelledOrders} cancelados ou recusados. Totais consideram todo o período, não apenas a página abaixo.</p>
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{cards.map(([label, value]) => <div key={label} className="rounded-2xl border border-ink/5 bg-white p-5"><p className="font-display text-2xl">{formatMoney(value)}</p><p className="mt-1 text-xs font-semibold text-ash">{label}</p></div>)}</div>
+    <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">O saldo exibido não é lucro: não inclui custo dos produtos, impostos ou despesas da loja. Há {summary.missingPaymentFees} pagamentos recebidos por Pix online/cartão com taxa ainda não informada. Registre a taxa efetivamente cobrada pelo provedor ou pela maquininha; não é estimada automaticamente.</p>
+    <section className="rounded-2xl bg-white p-5"><h2 className="font-display text-xl">Produtos em pedidos pagos e válidos</h2><p className="mb-3 text-xs text-ash">Valores brutos dos itens, antes de descontos e sem frete.</p>{!topProducts.length && <p className="text-sm text-ash">Nenhuma venda recebida neste período.</p>}<div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-left"><th>Produto</th><th>Quantidade</th><th>Valor bruto</th></tr></thead><tbody>{topProducts.map(product => <tr key={product.name} className="border-t"><td className="py-2">{product.name}</td><td>{product.qty}</td><td>{formatMoney(product.revenue)}</td></tr>)}</tbody></table></div></section>
+    <section className="rounded-2xl bg-white p-5"><h2 className="mb-4 font-display text-xl">Pedidos do período</h2>{!orders.length && <p className="text-sm text-ash">Nenhum pedido nesta página.</p>}<div className="overflow-x-auto"><table className="w-full min-w-[1100px] text-sm"><thead><tr className="text-left text-xs text-ash">{["Pedido/cliente", "Situação", "Pagamento", "Produtos", "Frete", "Desconto", "Total", "Repasse", "Taxa pagamento"].map(label => <th key={label} className="pb-3 pr-4">{label}</th>)}</tr></thead><tbody>{orders.map(order => <tr key={order.id} className="border-t border-ink/10"><td className="py-3 pr-4"><strong>#{order.number}</strong><p>{order.customer}</p><p className="text-xs text-ash">{new Date(order.createdAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</p></td><td className="pr-4">{ORDER_STATUS_LABEL[order.status]}<p className="text-xs">{order.paymentStatus}</p></td><td className="pr-4">{paymentDescription(order)}</td><td>{formatMoney(order.subtotal)}</td><td>{formatMoney(order.deliveryFee)}</td><td>{formatMoney(order.discount)}</td><td>{formatMoney(order.total)}</td><td>{formatMoney(order.deliveryPayout)}</td><td className="py-3"><form onSubmit={event => void fee(event, order.id)} className="flex items-center gap-2 print:hidden"><input key={`${order.id}:${order.paymentFee}`} aria-label={`Taxa do pedido ${order.number}`} name="fee" type="number" min={0} max={order.total} step="0.01" defaultValue={order.paymentFee ?? ""} placeholder="Não informada" className="w-28 rounded-lg border p-2 text-xs" /><Button size="sm" type="submit" disabled={saving !== null} aria-label={`Salvar taxa do pedido ${order.number}`}>Salvar</Button></form><span className="hidden print:inline">{order.paymentFee === null ? "Não informada" : formatMoney(order.paymentFee)}</span></td></tr>)}</tbody></table></div></section>
+  </div>;
 }

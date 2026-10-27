@@ -63,7 +63,7 @@ export const checkoutSchema = z.object({
   deliveryType: z.enum(["ENTREGA", "RETIRADA"]),
   addressId: z.string().max(64).optional(),
   newAddress: addressSchema.optional(),
-  scheduledFor: z.string().max(40).refine(value => !value || Number.isFinite(Date.parse(value)), "Data inválida").optional(),
+  scheduledFor: z.string().max(40).refine(value => !value || (/(?:Z|[+-]\d{2}:\d{2})$/.test(value) && Number.isFinite(Date.parse(value))), "Data inválida").optional(),
   paymentMethod: z.enum(["PIX", "PIX_ENTREGA", "CREDITO", "DEBITO", "DINHEIRO"]),
   paymentCardBrand: z.enum(CARD_BRANDS).optional(),
   changeFor: z.coerce.number().finite().min(0).max(100000).optional(),

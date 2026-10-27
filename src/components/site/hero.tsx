@@ -3,7 +3,7 @@ import Image from "next/image";
 import { Star, Flame, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function Hero() {
+export function Hero({ deliveryEstimate }: { deliveryEstimate: string }) {
   return (
     <section className="relative overflow-hidden bg-ink">
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-14 sm:px-6 lg:grid-cols-2 lg:items-center lg:py-20">
@@ -41,7 +41,7 @@ export function Hero() {
             <div className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-flame" />
               <div className="text-sm">
-                <p className="font-bold leading-none">~35 min</p>
+                <p className="font-bold leading-none">{deliveryEstimate}</p>
                 <p className="text-xs text-paper/50">tempo médio</p>
               </div>
             </div>

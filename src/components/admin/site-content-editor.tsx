@@ -26,7 +26,7 @@ export function SiteContentEditor({ initialValue }: { initialValue: SiteContent 
     <div><h1 className="font-display text-3xl">Conteúdo do site</h1><p className="mt-1 text-sm text-ash">Edite a página Sobre e as perguntas frequentes exibidas em Contato.</p></div>
     <fieldset disabled={saving} className="space-y-6">
       <section className="space-y-5 rounded-2xl bg-white p-5 sm:p-6"><h2 className="font-display text-2xl">Página Sobre</h2>
-        <div className="grid gap-4 sm:grid-cols-2">{field("eyebrow", "Chamada acima do título", 100)}{field("title", "Título da página", 200)}{field("body", "Texto sobre a loja", 12000, true)}{field("imageAlt", "Descrição da imagem", 200)}{field("addressLabel", "Título do endereço", 100)}{field("address", "Endereço exibido no Sobre", 300)}{field("hoursLabel", "Título dos horários", 100)}{field("hours", "Horários exibidos no Sobre", 300)}</div>
+        <div className="grid gap-4 sm:grid-cols-2">{field("eyebrow", "Chamada acima do título", 100)}{field("title", "Título da página", 200)}{field("body", "Texto sobre a loja", 12000, true)}{field("imageAlt", "Descrição da imagem", 200)}{field("addressLabel", "Título do endereço", 100)}{field("address", "Endereço exibido no Sobre", 300)}{field("hoursLabel", "Título dos horários", 100)}{field("hours", "Horários exibidos no Sobre", 2000)}</div>
         <div><p className="mb-2 text-sm font-semibold">Imagem da página Sobre</p><ImageUploader value={value.image} onChange={image => setValue(current => ({ ...current, image }))} /></div>
       </section>
       <section className="space-y-5 rounded-2xl bg-white p-5 sm:p-6"><h2 className="font-display text-2xl">Perguntas frequentes</h2>{field("faqTitle", "Título da seção de perguntas", 150)}

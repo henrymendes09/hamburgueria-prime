@@ -44,7 +44,19 @@ Em 27/10/2026, uma cópia real de 21 tabelas e 810 registros foi criptografada, 
 - Falha de release: identifique a última produção saudável e use o rollback da Vercel. A migration adiciona um valor ao enum de pagamentos e mantém compatibilidade com a versão anterior. Não reverta o banco apagando registros.
 - Falha do banco: confira o provedor e o endpoint de saúde. Restaure em banco separado, valide e só então planeje a troca de conexão. Preserve a origem para diagnóstico.
 
-## Pagamentos
+## Funcionamento, avisos e histórico administrativo
+
+Em `/admin/funcionamento`, configure fuso, dias, abertura/fechamento e intervalo estimado de entrega. Ative o recebimento somente após revisar os horários. Configuração ausente ou recebimento pausado mantém novos pedidos bloqueados; pedidos existentes continuam em operação. O cliente recebe um aviso ao entrar e vê uma faixa de situação atualizada a cada 30 segundos. A finalização valida horário no servidor e novamente dentro da transação, inclusive para agendamento (até sete dias). Fechamento anterior à abertura representa um turno que termina no dia seguinte.
+
+Notificações de pedido são gravadas na mesma transação que cria/altera o pedido, por trigger do banco com unicidade por pedido/status. O cliente consulta `/perfil/notificacoes`; o aviso no site/PWA verifica atualizações a cada 15 segundos enquanto a página estiver visível. E-mails transacionais usam o SMTP já configurado, sem expor credenciais. Envios são executados após a resposta, com bloqueio de concorrência por dois minutos, até três tentativas e intervalo mínimo de cinco minutos. Consultas autenticadas e mudanças de status processam a fila; `/api/cron/notifications` faz uma recuperação diária às 05:00 UTC, autenticada por `CRON_SECRET`. A aceitação SMTP não comprova leitura ou entrega na caixa principal. Não há garantia de envio exatamente uma vez diante de falha entre a aceitação SMTP e a atualização do banco. Investigue registros `order_notification_email_failed` e linhas `emailStatus=FAILED` com três tentativas antes de repetir manualmente. O SMTP Gmail está sujeito aos limites da conta.
+
+Histórico em `/admin/historico`: triggers registram mudanças de produtos, vínculos de adicionais, categorias, cupons, pedidos, equipe e configurações. As ações administrativas definem autor em contexto local da transação; automações aparecem como sistema. Valores anteriores/novos usam lista permitida de campos; demais mudanças registram apenas nomes dos campos, sem senhas, tokens ou credenciais. Registros anteriores à ativação não são reconstruídos. Não existe exclusão/edição desse histórico pela aplicação. Na restauração, `scripts/restore-backup.ts` ativa `app.restore_mode` somente na transação para preservar os registros do snapshot sem gerar histórico ou notificações adicionais.
+
+## Relatórios financeiros
+
+O relatório em `/admin/financeiro` usa data de criação do pedido, dias completos de Brasília e intervalo máximo de 366 dias. Exibe a situação atual, não um livro-caixa por data de liquidação: pagamentos recebidos em outra data aparecem no período de criação do pedido. O recebido inclui somente pedidos pagos e válidos; cancelados/recusados, estornos e pendências são separados. Frete, descontos, repasses e taxas de pagamento aparecem separadamente. Taxas do provedor/maquininha são informadas manualmente por pedido, com histórico; ausência permanece desconhecida. O saldo recebido menos taxas informadas e repasses não representa lucro. Totais e CSV cobrem o período completo; tabela de pedidos tem 50 linhas por página. Exportações protegem contra fórmulas em planilhas e permanecem restritas à loja autenticada.
+
+## Processamento de pagamentos
 
 O checkout atual oferece Pix online; cartão e dinheiro são pagos presencialmente na entrega/retirada, sem processamento online de cartão.
 

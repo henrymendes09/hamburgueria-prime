@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { Check, Clock, ChefHat, Bike, PartyPopper, Phone } from "lucide-react";
 import { ORDER_STATUS_STEPS, ORDER_STATUS_LABEL, cn } from "@/lib/utils";
-import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 const STEP_ICONS: Record<string, typeof Clock> = {
@@ -45,7 +44,6 @@ export function OrderTracking({
         if (data.status !== status) {
           setStatus(data.status);
           setDriver(data.entregador ?? driver);
-          toast.info(`Status atualizado: ${ORDER_STATUS_LABEL[data.status]}`);
         }
       } catch {
         // rede instável — tenta novamente no próximo ciclo

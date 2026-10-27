@@ -18,9 +18,10 @@ it("loads all store settings and replaces stale drafts with refreshed saved data
   const restaurant = { name: "Loja salva", logoUrl: "/logo-salvo.webp", primaryColor: "#ff0000", customDomain: "loja.example.com", phone: "11999990000", whatsapp: "11888880000", email: "store@example.invalid", cnpj: "12345678000100", address: "Rua salva, 10", businessHours: "18h às 23h", pixKey: "pix@example.invalid", storeCep: "01001-000", deliveryFee: 7.9, deliveryFeePerKm: 2, deliveryRadiusKm: 10, freeDeliveryThreshold: 90, description: "Descrição salva", updatedAt: new Date("2026-10-01T10:00:00Z") };
   data.restaurant.mockResolvedValue(restaurant);
   const view = render(await SettingsPage({ searchParams: Promise.resolve({}) }));
-  for (const [label, value] of [["Nome da hamburgueria", restaurant.name], ["Domínio próprio", restaurant.customDomain], ["Telefone", restaurant.phone], ["WhatsApp", restaurant.whatsapp], ["E-mail comercial", restaurant.email], ["CNPJ", restaurant.cnpj], ["Endereço", restaurant.address], ["Horários", restaurant.businessHours], ["Chave PIX", restaurant.pixKey], ["CEP da loja", restaurant.storeCep], ["Descrição", restaurant.description]]) {
+  for (const [label, value] of [["Nome da hamburgueria", restaurant.name], ["Domínio próprio", restaurant.customDomain], ["Telefone", restaurant.phone], ["WhatsApp", restaurant.whatsapp], ["E-mail comercial", restaurant.email], ["CNPJ", restaurant.cnpj], ["Endereço", restaurant.address], ["Chave PIX", restaurant.pixKey], ["CEP da loja", restaurant.storeCep], ["Descrição", restaurant.description]]) {
     expect((screen.getByLabelText(label) as HTMLInputElement).value).toBe(value);
   }
+  expect(screen.getByRole("link", { name: /Configurar dias, horários/ }).getAttribute("href")).toBe("/admin/funcionamento");
   expect((screen.getByLabelText("Taxa base de entrega") as HTMLInputElement).value).toBe("7.9");
   expect((screen.getByLabelText("Valor por km") as HTMLInputElement).value).toBe("2");
   expect((screen.getByLabelText("Raio máximo de entrega (km)") as HTMLInputElement).value).toBe("10");

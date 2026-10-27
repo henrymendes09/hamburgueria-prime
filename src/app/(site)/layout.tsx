@@ -4,6 +4,9 @@ import { CartDrawer } from "@/components/site/cart-drawer";
 import { AnalyticsTracker } from "@/components/site/analytics-tracker";
 import { getPublicRestaurant } from "@/lib/tenant";
 import type { Metadata } from "next";
+import { StoreStatus } from "@/components/site/store-status";
+import { storeStatus } from "@/lib/store-hours";
+import { CustomerNotifications } from "@/components/site/customer-notifications";
 
 export async function generateMetadata(): Promise<Metadata> {
   const restaurant = await getPublicRestaurant();
@@ -33,6 +36,8 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <AnalyticsTracker />
       <Header restaurantName={restaurant.name} restaurantSlug={restaurant.slug} logoUrl={restaurant.logoUrl} primaryColor={primaryColor} />
       <CartDrawer />
+      <StoreStatus initial={storeStatus(restaurant.operationSettings)} slug={restaurant.slug} />
+      <CustomerNotifications />
       <main className="flex-1">{children}</main>
       <Footer restaurant={restaurant} />
     </div>

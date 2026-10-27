@@ -1,4 +1,5 @@
 "use server";
+import { audited } from "@/lib/audit";
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
@@ -13,14 +14,15 @@ async function requireAdmin() {
     throw new Error("Não autorizado.");
   }
   if (!session.user.restaurantId) throw new Error("Empresa não identificada.");
-  return session.user.restaurantId;
+  return session;
 }
 
 export async function upsertCouponAction(
   couponId: string | null,
   input: unknown
 ): Promise<ActionResult> {
-  const restaurantId = await requireAdmin();
+  const session = await requireAdmin();
+  const restaurantId = session.user.restaurantId!;
   const parsed = couponSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, message: parsed.error.issues[0]?.message ?? "Dados inválidos." };
@@ -43,9 +45,9 @@ export async function upsertCouponAction(
   };
 
   if (couponId) {
-    await prisma.coupon.updateMany({ where: { id: couponId, restaurantId }, data: payload });
+    await audited(session, tx => tx.coupon.updateMany({ where: { id: couponId, restaurantId }, data: payload }));
   } else {
-    await prisma.coupon.create({ data: { ...payload, restaurantId } });
+    await audited(session, tx => tx.coupon.create({ data: { ...payload, restaurantId } }));
   }
 
   revalidatePath("/admin/cupons");
@@ -53,15 +55,17 @@ export async function upsertCouponAction(
 }
 
 export async function toggleCouponAction(couponId: string, active: boolean): Promise<ActionResult> {
-  const restaurantId = await requireAdmin();
-  await prisma.coupon.updateMany({ where: { id: couponId, restaurantId }, data: { active } });
+  const session = await requireAdmin();
+  const restaurantId = session.user.restaurantId!;
+  await audited(session, tx => tx.coupon.updateMany({ where: { id: couponId, restaurantId }, data: { active } }));
   revalidatePath("/admin/cupons");
   return { success: true, message: "Cupom atualizado." };
 }
 
 export async function deleteCouponAction(couponId: string): Promise<ActionResult> {
-  const restaurantId = await requireAdmin();
-  await prisma.coupon.deleteMany({ where: { id: couponId, restaurantId } });
+  const session = await requireAdmin();
+  const restaurantId = session.user.restaurantId!;
+  await audited(session, tx => tx.coupon.deleteMany({ where: { id: couponId, restaurantId } }));
   revalidatePath("/admin/cupons");
   return { success: true, message: "Cupom removido." };
 }

@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { User, Package, Heart, MapPin } from "lucide-react";
+import { User, Package, Heart, MapPin, Bell } from "lucide-react";
 
 const TABS = [
   { href: "/perfil", label: "Meu perfil", icon: User },
   { href: "/perfil/pedidos", label: "Meus pedidos", icon: Package },
   { href: "/perfil/favoritos", label: "Favoritos", icon: Heart },
   { href: "/perfil/enderecos", label: "Endereços", icon: MapPin },
+  { href: "/perfil/notificacoes", label: "Notificações", icon: Bell },
 ];
 
 export default function PerfilLayout({ children }: { children: React.ReactNode }) {
