@@ -6,10 +6,11 @@ import { ProductCard } from "@/components/site/product-card";
 import { ProductCardData } from "@/types/product";
 import { MenuSearch } from "@/components/site/menu-search";
 import { getPublicRestaurant } from "@/lib/tenant";
+import { CategoryIcon } from "@/components/site/category-icon";
 
 export const metadata = {
   title: "Cardápio",
-  description: "Confira o cardápio completo da Hamburgueria Prime: hambúrgueres, combos, batatas, bebidas e sobremesas.",
+  description: "Confira o cardápio completo da Hamburgueria Prime: hambúrgueres, combos, porções, bebidas e sobremesas.",
 };
 
 export default async function CardapioPage({
@@ -80,7 +81,7 @@ export default async function CardapioPage({
           <TabsTrigger value="todos">Todos</TabsTrigger>
           {categories.map((cat) => (
             <TabsTrigger key={cat.id} value={cat.slug}>
-              {cat.icon} {cat.name}
+              <CategoryIcon slug={cat.slug} icon={cat.icon} /> {cat.name}
             </TabsTrigger>
           ))}
         </TabsList>

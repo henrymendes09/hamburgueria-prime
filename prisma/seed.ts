@@ -40,8 +40,8 @@ async function main() {
   console.log("Criando categorias...");
   const categories = await Promise.all([
     prisma.category.create({ data: { name: "Hambúrguer", slug: "hamburguer", icon: "🍔", order: 1 } }),
-    prisma.category.create({ data: { name: "Combos", slug: "combos", icon: "🍟", order: 2 } }),
-    prisma.category.create({ data: { name: "Batatas", slug: "batatas", icon: "🥔", order: 3 } }),
+    prisma.category.create({ data: { name: "Combos", slug: "combos", icon: "🍔🥤🍟", order: 2 } }),
+    prisma.category.create({ data: { name: "Porções", slug: "batatas", icon: "🥔", order: 3 } }),
     prisma.category.create({ data: { name: "Bebidas", slug: "bebidas", icon: "🥤", order: 4 } }),
     prisma.category.create({ data: { name: "Sobremesas", slug: "sobremesas", icon: "🍰", order: 5 } }),
   ]);

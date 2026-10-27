@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { CategoryIcon } from "./category-icon";
 
 const CATEGORIES = [
   { slug: "hamburguer", name: "Hambúrguer", icon: "🍔" },
-  { slug: "combos", name: "Combos", icon: "🍟" },
-  { slug: "batatas", name: "Batatas", icon: "🥔" },
+  { slug: "combos", name: "Combos", icon: "🍔🥤🍟" },
+  { slug: "batatas", name: "Porções", icon: "🥔" },
   { slug: "bebidas", name: "Bebidas", icon: "🥤" },
   { slug: "sobremesas", name: "Sobremesas", icon: "🍰" },
 ];
@@ -18,7 +19,7 @@ export function CategoryStrip() {
             href={`/cardapio?categoria=${cat.slug}`}
             className="group flex flex-col items-center gap-2 rounded-2xl border-2 border-ink/5 bg-white p-4 text-center transition-all hover:-translate-y-1 hover:border-flame hover:shadow-lg"
           >
-            <span className="text-3xl">{cat.icon}</span>
+            <CategoryIcon slug={cat.slug} icon={cat.icon} large />
             <span className="text-xs font-bold uppercase tracking-wide text-ink">{cat.name}</span>
           </Link>
         ))}
