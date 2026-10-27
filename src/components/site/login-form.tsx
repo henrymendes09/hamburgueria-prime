@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 import { LogIn } from "lucide-react";
@@ -13,14 +13,14 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { loginSchema } from "@/lib/validations";
 import { z } from "zod";
+import { authPageHref, navigateAfterSignIn, safeAuthDestination } from "@/lib/auth-navigation";
 
 type FormData = z.infer<typeof loginSchema>;
 
 export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const callbackUrl = safeAuthDestination(searchParams.get("callbackUrl"));
   const blockedError = searchParams.get("error") === "CONTA_BLOQUEADA";
 
   const {
@@ -35,12 +35,13 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
       email: data.email,
       password: data.password,
       redirect: false,
+      redirectTo: callbackUrl,
     });
     setIsLoading(false);
 
-    if (result?.error) {
+    if (!result?.ok || result.error) {
       toast.error(
-        result.error === "CONTA_BLOQUEADA"
+        result?.error === "CONTA_BLOQUEADA"
           ? "Sua conta foi bloqueada. Entre em contato com o suporte."
           : "Email ou senha incorretos."
       );
@@ -48,8 +49,7 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
     }
 
     toast.success("Login realizado com sucesso!");
-    router.push(callbackUrl);
-    router.refresh();
+    navigateAfterSignIn(callbackUrl);
   }
 
   return (
@@ -89,7 +89,7 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
           <Button
             variant="outline"
             className="w-full"
-            onClick={() => signIn("google", { callbackUrl })}
+            onClick={() => signIn("google", { redirectTo: callbackUrl })}
           >
             <LogIn className="h-4 w-4" /> Entrar com Google
           </Button>
@@ -98,7 +98,7 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
 
       <p className="text-center text-sm text-ash">
         Não tem conta?{" "}
-        <Link href="/cadastro" className="font-bold text-flame">
+        <Link href={authPageHref("/cadastro", callbackUrl)} className="font-bold text-flame">
           Cadastre-se
         </Link>
       </p>

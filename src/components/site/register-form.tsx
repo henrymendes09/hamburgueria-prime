@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -14,12 +14,14 @@ import { registerSchema } from "@/lib/validations";
 import { registerAction } from "@/actions/auth";
 import { formatPhone } from "@/lib/utils";
 import { z } from "zod";
+import { authPageHref, navigateAfterSignIn, safeAuthDestination } from "@/lib/auth-navigation";
 
 type FormData = z.infer<typeof registerSchema>;
 
 export function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = safeAuthDestination(searchParams.get("callbackUrl"));
 
   const {
     register,
@@ -52,14 +54,14 @@ export function RegisterForm() {
       email: data.email,
       password: data.password,
       redirect: false,
+      redirectTo: callbackUrl,
     });
     setIsLoading(false);
 
-    if (loginResult?.ok) {
-      router.push("/");
-      router.refresh();
+    if (loginResult?.ok && !loginResult.error) {
+      navigateAfterSignIn(callbackUrl);
     } else {
-      router.push("/login");
+      window.location.replace(authPageHref("/login", callbackUrl));
     }
   }
 
@@ -103,7 +105,7 @@ export function RegisterForm() {
 
       <p className="text-center text-sm text-ash">
         Já tem conta?{" "}
-        <Link href="/login" className="font-bold text-flame">
+        <Link href={authPageHref("/login", callbackUrl)} className="font-bold text-flame">
           Fazer login
         </Link>
       </p>

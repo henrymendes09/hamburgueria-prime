@@ -8,12 +8,12 @@ export const metadata = { title: "Finalizar pedido" };
 
 export default async function CheckoutPage() {
   const session = await auth();
-  if (!session?.user?.id || session.user.blocked) redirect("/login");
+  if (!session?.user?.id || session.user.blocked) redirect("/login?callbackUrl=%2Fcheckout");
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: { ...publicUserSelect, addresses: { orderBy: { isDefault: "desc" }, select: { id: true, label: true, street: true, number: true, neighborhood: true, city: true, state: true, cep: true, isDefault: true, complement: true } } },
   });
-  if (!user) redirect("/login");
+  if (!user) redirect("/login?callbackUrl=%2Fcheckout");
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">

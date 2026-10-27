@@ -1,10 +1,17 @@
 import { Suspense } from "react";
 import { AuthLayout } from "@/components/site/auth-layout";
 import { LoginForm } from "@/components/site/login-form";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { safeAuthDestination } from "@/lib/auth-navigation";
 
 export const metadata = { title: "Login" };
 
-export default function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ callbackUrl?: string | string[] }> }) {
+  const [session, query] = await Promise.all([auth(), searchParams]);
+  if (session?.user?.id && !session.user.blocked) {
+    redirect(safeAuthDestination(typeof query.callbackUrl === "string" ? query.callbackUrl : null));
+  }
   const googleEnabled = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
   return (
     <AuthLayout title="Bem-vindo de volta" subtitle="Entre para acompanhar seus pedidos e favoritos">

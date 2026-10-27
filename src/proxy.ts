@@ -45,7 +45,9 @@ export default auth((req) => {
   if (isAccountRoute) {
     if (!session?.user) {
       const url = new URL("/login", req.url);
-      url.searchParams.set("callbackUrl", pathname);
+      const returnUrl = req.nextUrl.clone();
+      returnUrl.searchParams.delete("_rsc");
+      url.searchParams.set("callbackUrl", pathname + returnUrl.search);
       return NextResponse.redirect(url);
     }
     if (session.user.blocked) {
