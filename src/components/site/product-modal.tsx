@@ -183,8 +183,8 @@ export function ProductModal({
             />
           </div>
 
-          <div className="sticky bottom-0 -mx-6 flex items-center justify-between gap-3 border-t border-ink/5 bg-paper/95 px-6 pb-1 pt-4 backdrop-blur-sm">
-            <div className="flex items-center gap-3 rounded-full border-2 border-ink/10 px-2 py-1.5">
+          <div className="sticky bottom-0 -mx-6 flex flex-wrap items-center justify-between gap-3 border-t border-ink/5 bg-paper/95 px-6 pb-1 pt-4 backdrop-blur-sm">
+            <div className="flex shrink-0 items-center gap-3 rounded-full border-2 border-ink/10 px-2 py-1.5">
               <button
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                 className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-ink/5"
@@ -202,7 +202,7 @@ export function ProductModal({
               </button>
             </div>
 
-            <Button onClick={handleAddToCart} size="lg" className="min-w-0 flex-1 sm:flex-none">
+            <Button onClick={handleAddToCart} size="lg" className="w-full min-w-0 sm:w-auto sm:flex-1 lg:flex-none">
               Adicionar · {formatMoney(totalPrice)}
             </Button>
           </div>

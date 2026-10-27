@@ -316,15 +316,8 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
                   </div>
                 </div>
               )}
-              <div className="rounded-xl bg-ink/[0.03] p-3 text-sm normal-case">
-                {deliveryQuoteLoading && <p className="text-ash">Calculando distância e taxa de entrega...</p>}
-                {!deliveryQuoteLoading && deliveryQuote && (
-                  <p className="font-semibold text-ink">
-                    {deliveryQuote.distanceKm == null ? "Taxa fixa" : `${deliveryQuote.distanceKm.toFixed(1)} km da loja`} · {deliveryQuote.customerFee === 0 ? "Entrega grátis" : formatMoney(deliveryQuote.customerFee)}
-                  </p>
-                )}
-                {!deliveryQuoteLoading && deliveryQuoteError && <p className="text-red-600">{deliveryQuoteError}</p>}
-              </div>
+              {deliveryQuoteLoading && <p role="status" className="text-sm text-ash">Calculando entrega...</p>}
+              {!deliveryQuoteLoading && deliveryQuoteError && <p role="alert" className="text-sm text-red-600">{deliveryQuoteError}</p>}
             </div>
           )}
 

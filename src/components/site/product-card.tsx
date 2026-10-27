@@ -37,14 +37,19 @@ export function ProductCard({ product }: { product: ProductCardData }) {
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        disabled={!product.available}
+      <article
         className={cn(
-          "group text-left flex flex-col overflow-hidden rounded-2xl bg-white border-2 border-ink/5 hover:border-flame/30 hover:shadow-xl transition-all",
+          "group relative min-w-0 text-left flex flex-col overflow-hidden rounded-2xl bg-white border-2 border-ink/5 hover:border-flame/30 hover:shadow-xl transition-all",
           !product.available && "opacity-60 grayscale cursor-not-allowed"
         )}
       >
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          disabled={!product.available}
+          aria-label={`Ver ${product.name}`}
+          className="absolute inset-0 z-10 rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-flame"
+        />
         <div className="relative aspect-[4/3] overflow-hidden bg-ink/5">
           <Image
             src={product.image}
@@ -54,7 +59,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
             sizes="(max-width: 768px) 50vw, 300px"
           />
           {hasPromo && (
-            <Badge className="stamp absolute left-3 top-3">Promoção</Badge>
+            <Badge className="stamp absolute left-2 top-2 text-[10px] sm:left-3 sm:top-3 sm:text-xs">Promoção</Badge>
           )}
           {!product.available && (
             <div className="absolute inset-0 flex items-center justify-center bg-ink/50">
@@ -62,39 +67,47 @@ export function ProductCard({ product }: { product: ProductCardData }) {
             </div>
           )}
           <button
+            type="button"
             onClick={handleFavorite}
-            className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 backdrop-blur transition-transform hover:scale-110"
+            className="absolute bottom-2 right-2 z-20 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/90 backdrop-blur transition-transform hover:scale-110 sm:bottom-auto sm:right-3 sm:top-3"
             aria-label="Favoritar"
+            aria-pressed={favorited}
           >
             <Heart className={cn("h-4 w-4", favorited ? "fill-flame text-flame" : "text-ink")} />
           </button>
         </div>
 
-        <div className="flex flex-1 flex-col p-4">
-          <div className="flex items-center gap-1 text-xs text-gold font-semibold mb-1">
-            <Star className="h-3.5 w-3.5 fill-gold" /> {product.rating.toFixed(1)}
+        <div className="flex min-w-0 flex-1 flex-col p-3 sm:p-4">
+          <div className="flex flex-wrap items-center gap-1 text-xs text-gold font-semibold mb-1">
+            <Star className="h-3.5 w-3.5 shrink-0 fill-gold" /> {product.rating.toFixed(1)}
             <span className="text-ash-light font-normal">· {product.soldCount} vendidos</span>
           </div>
           <h3 className="font-display text-base text-ink leading-tight normal-case">{product.name}</h3>
           <p className="text-xs text-ash mt-1 line-clamp-2 flex-1">{product.description}</p>
 
-          <div className="mt-3 flex items-center justify-between">
-            <div>
+          <div className="mt-3 flex flex-wrap items-end justify-between gap-2">
+            <div className="min-w-0">
               {hasPromo ? (
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xs text-ash-light line-through">{formatMoney(product.price)}</span>
-                  <span className="font-display text-lg text-flame">{formatMoney(product.promoPrice!)}</span>
+                <div className="flex flex-col items-start">
+                  <span className="whitespace-nowrap text-xs text-ash-light line-through">{formatMoney(product.price)}</span>
+                  <span className="whitespace-nowrap font-display text-lg text-flame">{formatMoney(product.promoPrice!)}</span>
                 </div>
               ) : (
-                <span className="font-display text-lg text-ink">{formatMoney(product.price)}</span>
+                <span className="whitespace-nowrap font-display text-lg text-ink">{formatMoney(product.price)}</span>
               )}
             </div>
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-ink text-paper group-hover:bg-flame transition-colors">
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              disabled={!product.available}
+              aria-label={`Adicionar ${product.name} ao carrinho`}
+              className="relative z-20 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ink text-paper hover:bg-flame focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-flame transition-colors disabled:cursor-not-allowed"
+            >
               <Plus className="h-4 w-4" />
-            </span>
+            </button>
           </div>
         </div>
-      </button>
+      </article>
 
       <ProductModal product={product} open={open} onOpenChange={setOpen} />
     </>
