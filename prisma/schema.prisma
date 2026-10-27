@@ -420,6 +420,7 @@ enum PaymentStatus {
   PENDENTE
   PAGO
   FALHOU
+  ESTORNADO
 }
 
 enum DeliveryType {

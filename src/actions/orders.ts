@@ -4,11 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { emitOrderEvent } from "@/lib/order-events";
+import { cancelOrRefundPayment } from "@/lib/mercado-pago-payments";
 
 type ActionResult = { success: boolean; message: string };
 
 const NEXT_STATUS: Record<string, string[]> = {
-  RECEBIDO: ["ACEITO", "RECUSADO"],
+  RECEBIDO: ["ACEITO", "RECUSADO", "CANCELADO"],
   ACEITO: ["PREPARANDO", "CANCELADO"],
   PREPARANDO: ["SAIU_PARA_ENTREGA", "CANCELADO"],
   SAIU_PARA_ENTREGA: ["ENTREGUE"],
@@ -40,6 +41,15 @@ export async function updateOrderStatusAction(
     return { success: false, message: `Não é possível mudar de ${order.status} para ${newStatus}.` };
   }
 
+  if (order.paymentMethod === "PIX" && newStatus === "ACEITO" && order.paymentStatus !== "PAGO") {
+    return { success: false, message: "Aguarde a confirmação do pagamento Pix antes de aceitar." };
+  }
+  let paymentStatus = order.paymentStatus;
+  if (order.paymentMethod === "PIX" && ["CANCELADO", "RECUSADO"].includes(newStatus)) {
+    try { paymentStatus = await cancelOrRefundPayment(order); }
+    catch { return { success: false, message: "Não foi possível confirmar o cancelamento ou estorno no Mercado Pago. Tente novamente ou confira o pagamento no provedor." }; }
+  }
+
   await prisma.order.update({
     where: { id: orderId, restaurantId: session.user.restaurantId!, status: order.status },
     data: {
@@ -47,7 +57,7 @@ export async function updateOrderStatusAction(
       acceptedAt: newStatus === "ACEITO" ? new Date() : order.acceptedAt,
       deliveredAt: newStatus === "ENTREGUE" ? new Date() : order.deliveredAt,
       paymentStatus:
-        newStatus === "ENTREGUE" && order.paymentMethod !== "PIX" ? "PAGO" : order.paymentStatus,
+        newStatus === "ENTREGUE" && order.paymentMethod !== "PIX" ? "PAGO" : paymentStatus,
       statusLog: { create: { status: newStatus as never } },
     },
   });

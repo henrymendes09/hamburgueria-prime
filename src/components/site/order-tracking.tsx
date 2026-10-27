@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Check, Clock, ChefHat, Bike, PartyPopper, Phone } from "lucide-react";
 import { ORDER_STATUS_STEPS, ORDER_STATUS_LABEL, cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 const STEP_ICONS: Record<string, typeof Clock> = {
   RECEBIDO: Clock,
@@ -16,23 +17,31 @@ const STEP_ICONS: Record<string, typeof Clock> = {
 export function OrderTracking({
   orderId,
   initialStatus,
+  initialPaymentStatus,
   entregador,
 }: {
   orderId: string;
   initialStatus: string;
+  initialPaymentStatus: string;
   entregador: { name: string; phone: string | null } | null;
 }) {
   const [status, setStatus] = useState(initialStatus);
+  const [paymentStatus, setPaymentStatus] = useState(initialPaymentStatus);
+  const router = useRouter();
   const [driver, setDriver] = useState(entregador);
 
   useEffect(() => {
-    if (status === "ENTREGUE" || status === "CANCELADO" || status === "RECUSADO") return;
+    if (["ENTREGUE", "CANCELADO", "RECUSADO"].includes(status) && paymentStatus !== "PENDENTE") return;
 
     const interval = setInterval(async () => {
       try {
         const res = await fetch(`/api/orders/${orderId}/status`);
         if (!res.ok) return;
         const data = await res.json();
+        if (data.paymentStatus && data.paymentStatus !== paymentStatus) {
+          setPaymentStatus(data.paymentStatus);
+          router.refresh();
+        }
         if (data.status !== status) {
           setStatus(data.status);
           setDriver(data.entregador ?? driver);
@@ -45,7 +54,7 @@ export function OrderTracking({
 
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderId, status]);
+  }, [orderId, status, paymentStatus, router]);
 
   if (status === "CANCELADO" || status === "RECUSADO") {
     return (

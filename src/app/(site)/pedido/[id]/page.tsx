@@ -34,7 +34,7 @@ export default async function PedidoPage({ params }: { params: Promise<{ id: str
         </h1>
       </div>
 
-      <OrderTracking orderId={order.id} initialStatus={order.status} entregador={order.entregador} />
+      <OrderTracking orderId={order.id} initialStatus={order.status} initialPaymentStatus={order.paymentStatus} entregador={order.entregador} />
 
       <div className="mt-10 rounded-2xl border-2 border-ink/5 p-6">
         <h2 className="font-display text-lg text-ink mb-4">Itens do pedido</h2>
@@ -63,9 +63,13 @@ export default async function PedidoPage({ params }: { params: Promise<{ id: str
           <div className="flex justify-between text-ash pt-2">
             <span>Pagamento</span><span>{PAYMENT_LABEL[order.paymentMethod]}</span>
           </div>
+          <div className="flex justify-between text-ash">
+            <span>Situação do pagamento</span>
+            <span>{({ PAGO: "Confirmado", PENDENTE: "Aguardando pagamento", FALHOU: "Cancelado ou não aprovado", ESTORNADO: "Estornado" })[order.paymentStatus]}</span>
+          </div>
         </div>
 
-        {order.paymentMethod === "PIX" && order.pixQrCodeBase64 && order.pixQrCode && (
+        {order.paymentMethod === "PIX" && order.paymentStatus === "PENDENTE" && !["CANCELADO", "RECUSADO"].includes(order.status) && order.pixQrCodeBase64 && order.pixQrCode && (
           <div className="mt-6 rounded-2xl border-2 border-flame/20 bg-flame/5 p-5 text-center">
             <h3 className="font-display text-xl text-ink">Pague com Pix</h3>
             <p className="mt-1 text-sm normal-case text-ash">Escaneie o QR Code ou copie o código abaixo.</p>

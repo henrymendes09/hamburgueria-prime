@@ -6,9 +6,11 @@ import { rateLimit, clientIp } from "@/lib/rate-limit";
 import {
   registerSchema,
   forgotPasswordSchema,
+  resetPasswordSchema,
 } from "@/lib/validations";
 import { headers } from "next/headers";
 import { getPublicRestaurant } from "@/lib/tenant";
+import { consumePasswordReset } from "@/lib/password-recovery";
 
 type ActionResult = { success: boolean; message: string };
 
@@ -78,8 +80,16 @@ export async function forgotPasswordAction(input: unknown): Promise<ActionResult
 }
 
 export async function resetPasswordAction(input: unknown): Promise<ActionResult> {
-  // Previously issued tokens were disclosed publicly. Reject all of them.
-  void input;
-  return { success: false, message: "Este link não está mais disponível. Entre em contato com a loja." };
-
+  const limited = await rateLimit(await clientKey("reset-password"), { limit: 8, windowMs: 15 * 60000 });
+  if (!limited.success) return { success: false, message: "Muitas tentativas. Tente novamente mais tarde." };
+  const parsed = resetPasswordSchema.safeParse(input);
+  if (!parsed.success) return { success: false, message: "Link inválido ou senha fora dos requisitos." };
+  try {
+    const consumed = await consumePasswordReset(parsed.data.token, parsed.data.password);
+    return consumed
+      ? { success: true, message: "Senha atualizada. Faça login com sua nova senha." }
+      : { success: false, message: "Link inválido ou expirado. Solicite um novo link." };
+  } catch {
+    return { success: false, message: "Não foi possível redefinir a senha. Tente novamente." };
+  }
 }

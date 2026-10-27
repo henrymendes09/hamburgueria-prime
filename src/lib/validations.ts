@@ -20,14 +20,14 @@ export const loginSchema = z.object({
 });
 
 export const forgotPasswordSchema = z.object({
-  email: z.string().email("Email inválido"),
+  email: z.string().trim().email("Email inválido").max(254).toLowerCase(),
 });
 
 export const resetPasswordSchema = z
   .object({
-    token: z.string().min(1),
-    password: z.string().min(6, "A senha precisa ter no mínimo 6 caracteres"),
-    confirmPassword: z.string(),
+    token: z.string().max(100).regex(/^v2\.[a-f0-9]{64}$/, "Link inválido ou expirado"),
+    password,
+    confirmPassword: z.string().max(72),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "As senhas não coincidem",

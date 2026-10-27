@@ -11,6 +11,7 @@ import crypto from "crypto";
 import { getPublicRestaurant } from "@/lib/tenant";
 import { calculateDeliveryQuote, DeliveryQuote } from "@/lib/delivery";
 import { cartSelectionSchema, priceCart, cartTotal } from "@/lib/checkout-security";
+import { cancelOrRefundPayment } from "@/lib/mercado-pago-payments";
 
 type CheckoutResult =
   | { success: true; orderId: string; orderNumber: number }
@@ -82,12 +83,13 @@ export async function quoteDeliveryAction(input: {
 }
 
 async function createPixPayment(input: {
+  orderId: string;
   amount: number;
   email: string;
   description: string;
 }): Promise<PixPayment> {
   const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
-  if (!accessToken || accessToken.length < 30) {
+  if (!accessToken || accessToken.length < 30 || !process.env.MERCADOPAGO_WEBHOOK_SECRET) {
     throw new Error("O pagamento Pix ainda não está configurado. Escolha cartão ou dinheiro.");
   }
 
@@ -96,21 +98,25 @@ async function createPixPayment(input: {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
-      "X-Idempotency-Key": crypto.randomUUID(),
+      "X-Idempotency-Key": input.orderId,
     },
     body: JSON.stringify({
       transaction_amount: Number(input.amount.toFixed(2)),
       description: input.description,
       payment_method_id: "pix",
       payer: { email: input.email },
+      external_reference: input.orderId,
+      notification_url: `${process.env.NEXTAUTH_URL || "https://hamburgueria-prime.vercel.app"}/api/webhooks/mercado-pago`,
+      date_of_expiration: new Date(Date.now() + 60 * 60000).toISOString(),
     }),
     cache: "no-store",
+    signal: AbortSignal.timeout(15000),
   });
 
   const payment = await response.json();
   const transaction = payment?.point_of_interaction?.transaction_data;
   if (!response.ok || !payment?.id || !transaction?.qr_code || !transaction?.qr_code_base64) {
-    throw new Error(payment?.message || "Não foi possível gerar o Pix. Escolha outro pagamento.");
+    throw new Error("Não foi possível gerar o Pix. Escolha outro pagamento.");
   }
 
   return {
@@ -248,10 +254,12 @@ export async function checkoutAction(
 
   const total = Math.round(Math.max(subtotal + deliveryFee - discount, 0) * 100) / 100;
 
+  const orderId = crypto.randomUUID();
   let pixPayment: PixPayment | null = null;
   if (data.paymentMethod === "PIX") {
     try {
       pixPayment = await createPixPayment({
+        orderId,
         amount: total,
         email: session.user.email ?? "cliente@hamburgueriaprime.com.br",
         description: "Pedido Hamburgueria Prime",
@@ -283,6 +291,7 @@ export async function checkoutAction(
     const nextOrderNumber = (lastOrder?.number ?? 0) + 1;
     const created = await tx.order.create({
       data: {
+        id: orderId,
         restaurantId,
         number: nextOrderNumber,
         userId: session.user.id,
@@ -340,6 +349,10 @@ export async function checkoutAction(
     return created;
   }, { timeout: 15000 });
   } catch {
+    if (pixPayment) {
+      try { await cancelOrRefundPayment({ id: orderId, total, paymentExternalId: pixPayment.id }); }
+      catch { console.error("orphan_payment_compensation_failed", { orderId, paymentId: pixPayment.id }); }
+    }
     return { success: false, message: "Não foi possível concluir o pedido. Verifique seu cupom e tente novamente." };
   }
 
