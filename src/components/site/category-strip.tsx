@@ -4,7 +4,7 @@ import { CategoryIcon } from "./category-icon";
 const CATEGORIES = [
   { slug: "hamburguer", name: "Hambúrguer", icon: "🍔" },
   { slug: "combos", name: "Combos", icon: "🍔🥤🍟" },
-  { slug: "batatas", name: "Porções", icon: "🥔" },
+  { slug: "batatas", name: "Porções", icon: "🍟" },
   { slug: "bebidas", name: "Bebidas", icon: "🥤" },
   { slug: "sobremesas", name: "Sobremesas", icon: "🍰" },
 ];

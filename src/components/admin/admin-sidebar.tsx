@@ -15,6 +15,7 @@ import {
   LogOut,
   ExternalLink,
   MessageSquare,
+  FilePenLine,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +26,7 @@ const LINKS = [
   { href: "/admin/cupons", label: "Cupons", icon: Tag },
   { href: "/admin/clientes", label: "Clientes", icon: Users },
   { href: "/admin/mensagens", label: "Mensagens", icon: MessageSquare },
+  { href: "/admin/conteudo", label: "Conteúdo do site", icon: FilePenLine },
   { href: "/admin/financeiro", label: "Financeiro", icon: BarChart3 },
   { href: "/admin/equipe", label: "Equipe", icon: UserCog },
   { href: "/admin/configuracoes", label: "Configurações", icon: Settings },

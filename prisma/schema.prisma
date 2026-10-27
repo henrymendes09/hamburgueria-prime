@@ -66,6 +66,7 @@ model Restaurant {
   cnpj                  String?
   address               String?
   businessHours         String?
+  siteContent           Json?
   deliveryFee           Float            @default(0)
   storeCep              String?
   deliveryFeePerKm      Float            @default(1.5)

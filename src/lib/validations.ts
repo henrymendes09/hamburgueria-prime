@@ -49,12 +49,11 @@ export const addressSchema = z.object({
 
 export const cardSchema = z.object({
   brand: z.enum(["VISA", "MASTERCARD", "ELO", "AMEX", "OUTRO"]),
-  holderName: z.string().min(2, "Informe o nome impresso no cartão"),
-  number: z.string().min(13, "Número do cartão inválido"),
-  expMonth: z.coerce.number().min(1).max(12),
-  expYear: z.coerce.number().min(new Date().getFullYear()),
-  cvv: z.string().min(3).max(4),
-});
+  holderName: z.string().trim().min(2, "Informe o nome impresso no cartão").max(100),
+  last4: z.string().regex(/^\d{4}$/, "Informe somente os últimos 4 dígitos"),
+  expMonth: z.coerce.number().int().min(1).max(12),
+  expYear: z.coerce.number().int().min(new Date().getFullYear()).max(new Date().getFullYear() + 30),
+}).strict();
 
 export const checkoutSchema = z.object({
   name: z.string().min(2).max(100),

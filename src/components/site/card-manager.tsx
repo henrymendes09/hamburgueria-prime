@@ -13,10 +13,9 @@ import { addCardAction, deleteCardAction } from "@/actions/cards";
 const EMPTY = {
   brand: "VISA" as const,
   holderName: "",
-  number: "",
+  last4: "",
   expMonth: "",
   expYear: "",
-  cvv: "",
 };
 
 export function CardManager({ cards }: { cards: CardModel[] }) {
@@ -51,8 +50,8 @@ export function CardManager({ cards }: { cards: CardModel[] }) {
   return (
     <div className="space-y-4">
       <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800 normal-case">
-        Armazenamos apenas os últimos 4 dígitos do cartão para exibição — o CVV nunca é salvo.
-        Para cobranças reais, conecte um gateway de pagamento (ex. Mercado Pago/Stripe).
+        Este cadastro serve apenas para identificar seu cartão. Não realiza cobranças nem habilita pagamento online.
+        Informe somente os últimos 4 dígitos. Nunca informe o número completo ou o código de segurança.
       </div>
 
       {cards.map((card) => (
@@ -68,7 +67,7 @@ export function CardManager({ cards }: { cards: CardModel[] }) {
               </p>
             </div>
           </div>
-          <button onClick={() => handleDelete(card.id)} className="text-ash-light hover:text-flame">
+          <button aria-label={`Excluir cartão final ${card.last4}`} onClick={() => handleDelete(card.id)} className="text-ash-light hover:text-flame">
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
@@ -91,24 +90,20 @@ export function CardManager({ cards }: { cards: CardModel[] }) {
               </Select>
             </div>
             <div className="sm:col-span-2">
-              <Label>Nome impresso no cartão</Label>
-              <Input value={form.holderName} onChange={(e) => setForm((p) => ({ ...p, holderName: e.target.value }))} />
+              <Label htmlFor="card-holder">Nome impresso no cartão</Label>
+              <Input id="card-holder" maxLength={100} value={form.holderName} onChange={(e) => setForm((p) => ({ ...p, holderName: e.target.value }))} />
             </div>
             <div className="sm:col-span-2">
-              <Label>Número do cartão</Label>
-              <Input value={form.number} onChange={(e) => setForm((p) => ({ ...p, number: e.target.value }))} maxLength={16} />
+              <Label htmlFor="card-last4">Últimos 4 dígitos do cartão</Label>
+              <Input id="card-last4" inputMode="numeric" autoComplete="off" pattern="[0-9]{4}" value={form.last4} onChange={(e) => setForm((p) => ({ ...p, last4: e.target.value.replace(/\D/g, "").slice(0, 4) }))} maxLength={4} required />
             </div>
             <div>
-              <Label>Mês</Label>
-              <Input value={form.expMonth} onChange={(e) => setForm((p) => ({ ...p, expMonth: e.target.value }))} placeholder="MM" maxLength={2} />
+              <Label htmlFor="card-month">Mês</Label>
+              <Input id="card-month" inputMode="numeric" value={form.expMonth} onChange={(e) => setForm((p) => ({ ...p, expMonth: e.target.value }))} placeholder="MM" maxLength={2} />
             </div>
             <div>
-              <Label>Ano</Label>
-              <Input value={form.expYear} onChange={(e) => setForm((p) => ({ ...p, expYear: e.target.value }))} placeholder="AAAA" maxLength={4} />
-            </div>
-            <div>
-              <Label>CVV</Label>
-              <Input value={form.cvv} onChange={(e) => setForm((p) => ({ ...p, cvv: e.target.value }))} maxLength={4} />
+              <Label htmlFor="card-year">Ano</Label>
+              <Input id="card-year" inputMode="numeric" value={form.expYear} onChange={(e) => setForm((p) => ({ ...p, expYear: e.target.value }))} placeholder="AAAA" maxLength={4} />
             </div>
           </div>
           <div className="flex gap-3">

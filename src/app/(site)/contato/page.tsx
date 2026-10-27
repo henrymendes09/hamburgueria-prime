@@ -2,11 +2,13 @@ import { ContactForm } from "@/components/site/contact-form";
 import { MessageCircle, Phone, Mail, MapPin } from "lucide-react";
 import { FAQ } from "@/components/site/faq";
 import { getPublicRestaurant } from "@/lib/tenant";
+import { resolveSiteContent } from "@/lib/site-content";
 
 export const metadata = { title: "Contato" };
 
 export default async function ContatoPage() {
   const restaurant = await getPublicRestaurant();
+  const content = resolveSiteContent(restaurant);
   return <div className="mx-auto max-w-5xl px-4 py-14 sm:px-6">
     <div className="mb-12 text-center"><span className="text-xs font-bold uppercase tracking-widest" style={{ color: restaurant.primaryColor }}>Fale conosco</span><h1 className="mt-2 font-display text-4xl text-ink sm:text-5xl">Estamos aqui para ajudar</h1></div>
     <div className="grid gap-10 lg:grid-cols-5">
@@ -19,7 +21,7 @@ export default async function ContatoPage() {
       </div>
       <div className="lg:col-span-3"><ContactForm /></div>
     </div>
-    <FAQ />
+    <FAQ items={content.faqs} title={content.faqTitle} />
   </div>;
 }
 

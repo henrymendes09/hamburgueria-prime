@@ -2,36 +2,13 @@
 
 import * as AccordionPrimitive from "@radix-ui/react-accordion";
 import { ChevronDown } from "lucide-react";
-
-const FAQ_ITEMS = [
-  {
-    q: "Qual o tempo médio de entrega?",
-    a: "Nosso tempo médio é de 35 a 50 minutos, dependendo da sua região e do movimento do dia.",
-  },
-  {
-    q: "Vocês entregam em toda a cidade?",
-    a: "Entregamos em um raio de 8km da loja. Ao inserir seu CEP no checkout, você verá se sua região está coberta.",
-  },
-  {
-    q: "Posso agendar meu pedido?",
-    a: "Sim! No checkout, escolha a opção de entrega agendada e selecione o melhor dia e horário para você.",
-  },
-  {
-    q: "Quais formas de pagamento vocês aceitam?",
-    a: "Aceitamos Pix, cartão de crédito/débito e dinheiro (com opção de troco).",
-  },
-  {
-    q: "Como funciona a política de cancelamento?",
-    a: "Pedidos podem ser cancelados gratuitamente enquanto estiverem com status 'Recebido'. Após aceito pela cozinha, entre em contato pelo WhatsApp.",
-  },
-];
-
-export function FAQ() {
+export function FAQ({ items, title }: { items: { q: string; a: string }[]; title: string }) {
+  if (!items.length) return null;
   return (
     <div className="mt-16">
-      <h2 className="font-display text-3xl text-ink text-center mb-8">Perguntas frequentes</h2>
+      <h2 className="font-display text-3xl text-ink text-center mb-8">{title}</h2>
       <AccordionPrimitive.Root type="single" collapsible className="max-w-2xl mx-auto space-y-3">
-        {FAQ_ITEMS.map((item, i) => (
+        {items.map((item, i) => (
           <AccordionPrimitive.Item
             key={i}
             value={`item-${i}`}

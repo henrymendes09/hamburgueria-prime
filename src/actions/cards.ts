@@ -16,13 +16,9 @@ export async function addCardAction(input: unknown): Promise<ActionResult> {
     return { success: false, message: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
-  const { number, cvv, ...rest } = parsed.data;
-  void cvv; // O CVV nunca é armazenado — usado apenas na hora da cobrança real (gateway de pagamento)
-
   await prisma.card.create({
     data: {
-      ...rest,
-      last4: number.slice(-4),
+      ...parsed.data,
       userId: session.user.id,
     },
   });
