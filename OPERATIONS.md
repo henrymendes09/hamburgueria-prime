@@ -8,9 +8,9 @@ Aplicação: https://hamburgueria-prime.vercel.app
 - Backups: Vercel Blob **privado** `hamburgueria-prime-backups`, com chave própria `BACKUP_READ_WRITE_TOKEN`.
 - `BACKUP_ENCRYPTION_KEY`: chave AES-256 de 32 bytes em base64. Não a substitua sem guardar a anterior: os arquivos antigos dependem dela.
 - `CRON_SECRET`: autentica o backup e o diagnóstico operacional. Nenhum desses segredos deve usar prefixo `NEXT_PUBLIC_`.
-- E-mail: depende da conclusão da instalação Resend e da verificação de um domínio/remetente. A emissão pública de links continua desativada enquanto esse canal não estiver conectado. A lógica de tokens v2, hash, expiração de 30 minutos, consumo único e revogação das sessões está implementada e testada.
+- E-mail: envio por Gmail SMTP com `GMAIL_USER` e `GMAIL_APP_PASSWORD` (senha de app, guardada como Secret de produção). A recuperação só é habilitada quando essas variáveis estão configuradas. Usa tokens v2 aleatórios, hash no banco, expiração de 30 minutos, consumo único e revogação das sessões. O envio ocorre após a resposta para não revelar a existência de contas pelo tempo do SMTP; há limites por IP e endereço. Falhas de envio invalidam o token e não expõem dados do provedor.
 - Pix: depende de credencial válida e `MERCADOPAGO_WEBHOOK_SECRET` na produção. Configure no Mercado Pago o tópico `payment` e a URL `/api/webhooks/mercado-pago`. A assinatura deve ser a fornecida pelo Mercado Pago, nunca um valor inventado.
-- Monitoramento externo: instalação Checkly pendente de aceite na Vercel. Depois de conectado, configure verificação HTTPS de `/api/health` e alerta ao responsável. O endpoint sozinho não envia alertas.
+- Monitoramento externo: Checkly conectado pela Vercel. `scripts/configure-monitoring.mjs` cria ou atualiza três verificações: cardápio, saúde do banco e idade do backup. Cada uma executa a cada 15 minutos e alerta por e-mail após duas falhas, com aviso de recuperação. O backup usa `MONITORING_SECRET`, uma credencial somente de leitura, separada do segredo que autoriza executar backups. Configure `CHECKLY_API_KEY`, `CHECKLY_ACCOUNT_ID`, `ALERT_EMAIL` e `MONITORING_SECRET` ao executar o script; não inclua seus valores no Git.
 
 ## Backups
 
@@ -38,8 +38,9 @@ Em 27/10/2026, uma cópia real de 21 tabelas e 810 registros foi criptografada, 
 ## Saúde e incidentes
 
 - `GET /api/health`: consulta o banco e retorna 200 ou 503, sem detalhes internos ou dados pessoais.
+- `GET /api/health/backup`, com Bearer `MONITORING_SECRET`: retorna 200 se existe backup com menos de 36 horas, ou 503 se estiver atrasado/indisponível. Não expõe os objetos, segredos ou registros do banco.
 - `GET /api/operations`, com Bearer `CRON_SECRET`: verifica banco, backup com menos de 36 horas, configuração de armazenamento/e-mail, credencial do Mercado Pago e presença da assinatura do webhook. Não retorna segredos. Consulte o resultado autenticado; não use esse segredo em ferramentas públicas.
-- Nos logs da Vercel, procure `database_backup_failed`, `database_backup_completed`, `database_health_failed`, `payment_webhook_processing_failed`, `payment_reconciliation_failed` e `orphan_payment_compensation_failed`. Configure alertas externos após conectar o monitoramento.
+- Nos logs da Vercel, procure `database_backup_failed`, `database_backup_completed`, `database_health_failed`, `password_reset_delivery_failed`, `password_reset_request_failed`, `payment_webhook_processing_failed`, `payment_reconciliation_failed` e `orphan_payment_compensation_failed`.
 - Falha de release: identifique a última produção saudável e use o rollback da Vercel. A migration adiciona um valor ao enum de pagamentos e mantém compatibilidade com a versão anterior. Não reverta o banco apagando registros.
 - Falha do banco: confira o provedor e o endpoint de saúde. Restaure em banco separado, valide e só então planeje a troca de conexão. Preserve a origem para diagnóstico.
 

@@ -8,9 +8,12 @@ As sessões consultam o estado atual da conta e são invalidadas quando a senha
 muda ou a conta é bloqueada. Sessões anteriores a esta atualização exigem novo
 login. Falhas na consulta de segurança negam o acesso.
 
-A recuperação automática de senha permanece desativada até existir um canal
-verificado de envio de e-mail. Nenhum token é devolvido publicamente e os tokens
-antigos não são aceitos. A interface orienta o cliente a contatar a loja.
+A recuperação automática usa Gmail SMTP com senha de app em segredo de produção.
+Sem as credenciais, a interface orienta o cliente a contatar a loja. Os links
+expiram em 30 minutos, só podem ser consumidos uma vez e são guardados apenas
+como hash no banco. Nenhum token é devolvido publicamente e os tokens antigos
+não são aceitos. Solicitações têm limites por IP e endereço; a resposta é igual
+para contas existentes e desconhecidas, e o envio acontece após a resposta.
 
 O limite de tentativas em produção usa PostgreSQL, compartilhado pelas instâncias
 da Vercel. Antes de publicar esta atualização em um banco existente, execute

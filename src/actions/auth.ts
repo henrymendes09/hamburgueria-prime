@@ -10,7 +10,9 @@ import {
 } from "@/lib/validations";
 import { headers } from "next/headers";
 import { getPublicRestaurant } from "@/lib/tenant";
-import { consumePasswordReset } from "@/lib/password-recovery";
+import { consumePasswordReset, issuePasswordReset, resetTokenDigest } from "@/lib/password-recovery";
+import { emailIsConfigured, sendPasswordResetEmail } from "@/lib/recovery-email";
+import { after } from "next/server";
 
 type ActionResult = { success: boolean; message: string };
 
@@ -71,11 +73,18 @@ export async function forgotPasswordAction(input: unknown): Promise<ActionResult
     return { success: false, message: "Email inválido." };
   }
 
-  // Recovery stays disabled until a verified delivery channel is configured.
-  // Never issue a bearer token to an anonymous requester, including in development.
+  if (!emailIsConfigured()) return { success: true, message: "Para recuperar o acesso, entre em contato com a loja." };
+  // Limit requests per address across IPs without storing the email in rate-limit keys.
+  const accountLimit = await rateLimit(`password-email:${resetTokenDigest(parsed.data.email)}`, { limit: 3, windowMs: 30 * 60000 });
+  if (accountLimit.success) {
+    after(async () => {
+      try { await issuePasswordReset(parsed.data.email, sendPasswordResetEmail); }
+      catch { console.error("password_reset_request_failed"); }
+    });
+  }
   return {
     success: true,
-    message: "Para recuperar o acesso, entre em contato com a loja.",
+    message: "Se houver uma conta com esse e-mail, você receberá um link para redefinir a senha.",
   };
 }
 

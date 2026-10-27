@@ -45,6 +45,7 @@
     "lucide-react": "^1.25.0",
     "next": "^16.4.3",
     "next-auth": "^5.0.0-beta.32",
+    "nodemailer": "^10.2.1",
     "prisma": "^6.19.3",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -62,6 +63,7 @@
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
     "@types/node": "^22",
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
@@ -73,7 +75,10 @@
     "vitest": "^5.0.3"
   },
   "overrides": {
+    "nodemailer": "$nodemailer",
     "deepmerge-ts": "^8.0.2",
-    "@vercel/cli-config": { "zod": "^4.6.7" }
+    "@vercel/cli-config": {
+      "zod": "^4.6.7"
+    }
   }
 }

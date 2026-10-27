@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { list } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import { paymentRequest } from "@/lib/mercado-pago-payments";
+import { emailIsConfigured } from "@/lib/recovery-email";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -21,6 +22,6 @@ export async function GET(request: Request) {
   try { await paymentRequest("/users/me"); paymentCredentialsValid = true; } catch { /* Invalid/missing provider credentials. */ }
   const checks = { database, backupRecent, imageStorageConfigured: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
     paymentCredentialsValid, paymentWebhookConfigured: Boolean(process.env.MERCADOPAGO_WEBHOOK_SECRET),
-    emailConfigured: Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM) };
+    emailConfigured: emailIsConfigured() };
   return Response.json(checks, { headers: { "Cache-Control": "no-store" } });
 }
