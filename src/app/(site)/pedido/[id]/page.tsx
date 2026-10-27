@@ -1,9 +1,10 @@
+import { paymentDescription } from "@/lib/payment-options";
 import { prisma } from "@/lib/prisma";
 /* eslint-disable @next/next/no-img-element */
 import { auth } from "@/lib/auth";
 import { notFound, redirect } from "next/navigation";
 import { OrderTracking } from "@/components/site/order-tracking";
-import { formatMoney, ORDER_STATUS_LABEL, PAYMENT_LABEL } from "@/lib/utils";
+import { formatMoney, ORDER_STATUS_LABEL } from "@/lib/utils";
 import { getPublicRestaurant } from "@/lib/tenant";
 
 export const metadata = { title: "Acompanhar pedido" };
@@ -61,7 +62,7 @@ export default async function PedidoPage({ params }: { params: Promise<{ id: str
             <span>Total</span><span className="text-flame">{formatMoney(order.total)}</span>
           </div>
           <div className="flex justify-between text-ash pt-2">
-            <span>Pagamento</span><span>{PAYMENT_LABEL[order.paymentMethod]}</span>
+            <span>Pagamento</span><span>{paymentDescription(order)}</span>
           </div>
           <div className="flex justify-between text-ash">
             <span>Situação do pagamento</span>

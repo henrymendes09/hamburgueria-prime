@@ -14,10 +14,11 @@ import { useCartStore, cartSubtotal, itemPrice } from "@/lib/cart-store";
 import { checkoutAction, quoteDeliveryAction } from "@/actions/checkout";
 import { Truck, Store, Wallet, QrCode, CreditCard, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CARD_BRANDS, DELIVERY_PAYMENTS, type DeliveryPaymentMethod, isCardPayment, paymentDescription } from "@/lib/payment-options";
 
 type UserWithAddresses = PublicUser & { addresses: Pick<Address, "id" | "label" | "street" | "number" | "neighborhood" | "city" | "state" | "cep" | "isDefault" | "complement">[] };
 
-export function CheckoutForm({ user }: { user: UserWithAddresses }) {
+export function CheckoutForm({ user, onlinePixAvailable = false }: { user: UserWithAddresses; onlinePixAvailable?: boolean }) {
   const router = useRouter();
   const { items, coupon, clear } = useCartStore();
 
@@ -40,8 +41,9 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
   });
   const [cepLoading, setCepLoading] = useState(false);
   const [scheduledFor, setScheduledFor] = useState("");
-  const [paymentTiming, setPaymentTiming] = useState<"AGORA" | "ENTREGA">("AGORA");
-  const [deliveryPaymentMethod, setDeliveryPaymentMethod] = useState<"CARTAO" | "DINHEIRO">("CARTAO");
+  const [paymentTiming, setPaymentTiming] = useState<"AGORA" | "ENTREGA">(onlinePixAvailable ? "AGORA" : "ENTREGA");
+  const [deliveryPaymentMethod, setDeliveryPaymentMethod] = useState<DeliveryPaymentMethod>("PIX_ENTREGA");
+  const [paymentCardBrand, setPaymentCardBrand] = useState("");
   const [changeFor, setChangeFor] = useState("");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,7 +59,7 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
       : Math.min(coupon.value, subtotal)
     : 0;
   const total = Math.max(subtotal + deliveryFee - discount, 0);
-  const paymentMethod: "PIX" | "CARTAO" | "DINHEIRO" =
+  const paymentMethod: "PIX" | DeliveryPaymentMethod =
     paymentTiming === "AGORA" ? "PIX" : deliveryPaymentMethod;
 
   useEffect(() => {
@@ -137,6 +139,10 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
       return;
     }
 
+    if (isCardPayment(paymentMethod) && !paymentCardBrand) {
+      toast.error("Selecione a bandeira do cartão.");
+      return;
+    }
     setIsSubmitting(true);
     try {
       const result = await checkoutAction(
@@ -149,6 +155,7 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
         newAddress: deliveryType === "ENTREGA" && useNewAddress ? newAddress : undefined,
         scheduledFor: scheduledFor || undefined,
         paymentMethod,
+        paymentCardBrand: isCardPayment(paymentMethod) ? paymentCardBrand : undefined,
         changeFor: paymentMethod === "DINHEIRO" && changeFor ? Number(changeFor) : undefined,
         notes: notes || undefined,
         couponCode: coupon?.code,
@@ -338,13 +345,14 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
             <button
               type="button"
               onClick={() => setPaymentTiming("AGORA")}
+              disabled={!onlinePixAvailable}
               className={cn(
-                "flex items-center gap-3 rounded-xl border-2 p-4 text-left",
+                "flex items-center gap-3 rounded-xl border-2 p-4 text-left disabled:cursor-not-allowed disabled:opacity-50",
                 paymentTiming === "AGORA" ? "border-flame bg-flame/5 text-flame" : "border-ink/10 text-ink/60"
               )}
             >
               <QrCode className="h-6 w-6 shrink-0" />
-              <span><strong className="block text-sm uppercase">Pagar agora</strong><small className="normal-case opacity-70">PIX</small></span>
+              <span><strong className="block text-sm uppercase">Pagar agora</strong><small className="normal-case opacity-70">{onlinePixAvailable ? "PIX" : "Pix online indisponível no momento"}</small></span>
             </button>
             <button
               type="button"
@@ -355,7 +363,7 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
               )}
             >
               <Wallet className="h-6 w-6 shrink-0" />
-              <span><strong className="block text-sm uppercase">{deliveryType === "ENTREGA" ? "Pagar na entrega" : "Pagar na retirada"}</strong><small className="normal-case opacity-70">Cartão ou dinheiro</small></span>
+              <span><strong className="block text-sm uppercase">{deliveryType === "ENTREGA" ? "Pagar na entrega" : "Pagar na retirada"}</strong><small className="normal-case opacity-70">Pix, crédito, débito ou dinheiro</small></span>
             </button>
           </div>
 
@@ -368,13 +376,14 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
             <div className="mt-4 rounded-xl bg-ink/[0.03] p-4">
               <p className="mb-3 text-sm font-bold">Como deseja pagar {deliveryType === "ENTREGA" ? "na entrega" : "na retirada"}?</p>
               <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
-                <button type="button" onClick={() => setDeliveryPaymentMethod("CARTAO")} className={cn("flex items-center justify-center gap-2 rounded-xl border-2 py-3 text-xs font-bold uppercase", deliveryPaymentMethod === "CARTAO" ? "border-flame bg-flame/5 text-flame" : "border-ink/10 text-ink/60")}><CreditCard className="h-5 w-5" /> Cartão</button>
-                <button type="button" onClick={() => setDeliveryPaymentMethod("DINHEIRO")} className={cn("flex items-center justify-center gap-2 rounded-xl border-2 py-3 text-xs font-bold uppercase", deliveryPaymentMethod === "DINHEIRO" ? "border-flame bg-flame/5 text-flame" : "border-ink/10 text-ink/60")}><Wallet className="h-5 w-5" /> Dinheiro</button>
+                {DELIVERY_PAYMENTS.map(option => <button key={option.value} type="button" aria-pressed={deliveryPaymentMethod === option.value} onClick={() => { setDeliveryPaymentMethod(option.value); setPaymentCardBrand(""); setChangeFor(""); }} className={cn("flex items-center justify-center gap-2 rounded-xl border-2 py-3 text-xs font-bold uppercase", deliveryPaymentMethod === option.value ? "border-flame bg-flame/5 text-flame" : "border-ink/10 text-ink/60")}>{option.value === "PIX_ENTREGA" ? <QrCode className="h-5 w-5" /> : option.value === "DINHEIRO" ? <Wallet className="h-5 w-5" /> : <CreditCard className="h-5 w-5" />}{option.label}</button>)}
               </div>
+              {isCardPayment(deliveryPaymentMethod) && <div className="mt-4"><Label htmlFor="payment-card-brand">Bandeira do cartão</Label><select id="payment-card-brand" value={paymentCardBrand} required onChange={event => setPaymentCardBrand(event.target.value)} className="w-full rounded-xl border-2 border-ink/10 bg-white p-3 text-sm normal-case"><option value="">Selecione a bandeira</option>{CARD_BRANDS.map(brand => <option key={brand} value={brand}>{brand}</option>)}</select><p className="mt-2 text-xs text-ash normal-case">O pagamento será feito na maquininha. Não informe número do cartão ou código de segurança.</p></div>}
+              {deliveryPaymentMethod === "PIX_ENTREGA" && <p className="mt-3 text-xs text-ash normal-case">Faça o Pix somente no recebimento e confirme o pagamento com a loja ou o entregador.</p>}
               {deliveryPaymentMethod === "DINHEIRO" && (
                 <div className="mt-4">
-                  <Label>Troco para quanto?</Label>
-                  <Input type="number" min={total} step="0.01" value={changeFor} onChange={(e) => setChangeFor(e.target.value)} placeholder={formatMoney(total)} />
+                  <Label htmlFor="cash-change">Troco para quanto?</Label>
+                  <Input id="cash-change" type="number" min={total} step="0.01" value={changeFor} onChange={(e) => setChangeFor(e.target.value)} placeholder={formatMoney(total)} />
                 </div>
               )}
             </div>
@@ -420,7 +429,7 @@ export function CheckoutForm({ user }: { user: UserWithAddresses }) {
             </div>
             <div className="flex justify-between gap-3 pt-2 text-xs text-ash">
               <span>Pagamento</span>
-              <span className="text-right font-semibold text-ink">{paymentTiming === "AGORA" ? "Agora via PIX" : `${deliveryPaymentMethod === "CARTAO" ? "Cartão" : "Dinheiro"} ${deliveryType === "ENTREGA" ? "na entrega" : "na retirada"}`}</span>
+              <span className="text-right font-semibold text-ink">{paymentDescription({ paymentMethod, paymentCardBrand: isCardPayment(paymentMethod) ? paymentCardBrand : null, deliveryType })}</span>
             </div>
           </div>
           <Button className="w-full mt-5" size="lg" onClick={handleSubmit} disabled={isSubmitting || deliveryQuoteLoading || (deliveryType === "ENTREGA" && !deliveryQuote)}>

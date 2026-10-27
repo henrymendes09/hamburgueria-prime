@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CARD_BRANDS, isCardPayment } from "@/lib/payment-options";
 const password = z.string().min(10, "Use uma senha com pelo menos 10 caracteres").max(72).refine(value => new TextEncoder().encode(value).length <= 72, "Senha muito longa");
 
 export const registerSchema = z
@@ -63,10 +64,15 @@ export const checkoutSchema = z.object({
   addressId: z.string().max(64).optional(),
   newAddress: addressSchema.optional(),
   scheduledFor: z.string().max(40).refine(value => !value || Number.isFinite(Date.parse(value)), "Data inválida").optional(),
-  paymentMethod: z.enum(["PIX", "CARTAO", "DINHEIRO"]),
+  paymentMethod: z.enum(["PIX", "PIX_ENTREGA", "CREDITO", "DEBITO", "DINHEIRO"]),
+  paymentCardBrand: z.enum(CARD_BRANDS).optional(),
   changeFor: z.coerce.number().finite().min(0).max(100000).optional(),
   notes: z.string().max(1000).optional(),
   couponCode: z.string().max(50).optional(),
+}).superRefine((data, ctx) => {
+  if (isCardPayment(data.paymentMethod) && !data.paymentCardBrand) ctx.addIssue({ code: "custom", path: ["paymentCardBrand"], message: "Selecione a bandeira do cartão." });
+  if (!isCardPayment(data.paymentMethod) && data.paymentCardBrand) ctx.addIssue({ code: "custom", path: ["paymentCardBrand"], message: "Bandeira disponível apenas para pagamento com cartão." });
+  if (data.paymentMethod !== "DINHEIRO" && data.changeFor !== undefined) ctx.addIssue({ code: "custom", path: ["changeFor"], message: "Troco disponível apenas para dinheiro." });
 });
 
 export const productSchema = z.object({

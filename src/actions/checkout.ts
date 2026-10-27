@@ -90,7 +90,7 @@ async function createPixPayment(input: {
 }): Promise<PixPayment> {
   const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
   if (!accessToken || accessToken.length < 30 || !process.env.MERCADOPAGO_WEBHOOK_SECRET) {
-    throw new Error("O pagamento Pix ainda não está configurado. Escolha cartão ou dinheiro.");
+    throw new Error("O Pix online ainda não está disponível. Escolha pagamento no recebimento.");
   }
 
   const response = await fetch("https://api.mercadopago.com/v1/payments", {
@@ -253,6 +253,7 @@ export async function checkoutAction(
   }
 
   const total = Math.round(Math.max(subtotal + deliveryFee - discount, 0) * 100) / 100;
+  if (data.changeFor !== undefined && data.changeFor < total) return { success: false, message: "O valor para troco deve ser igual ou maior que o total do pedido." };
 
   const orderId = crypto.randomUUID();
   let pixPayment: PixPayment | null = null;
@@ -299,6 +300,7 @@ export async function checkoutAction(
         deliveryType: data.deliveryType,
         scheduledFor: data.scheduledFor ? new Date(data.scheduledFor) : null,
         paymentMethod: data.paymentMethod,
+        paymentCardBrand: data.paymentCardBrand ?? null,
         paymentExternalId: pixPayment?.id,
         pixQrCode: pixPayment?.qrCode,
         pixQrCodeBase64: pixPayment?.qrCodeBase64,

@@ -18,7 +18,7 @@ export default async function CheckoutPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
       <h1 className="font-display text-3xl text-ink mb-8 sm:text-4xl">Finalizar pedido</h1>
-      <CheckoutForm user={{ ...toPublicUser(user), addresses: user.addresses }} />
+      <CheckoutForm user={{ ...toPublicUser(user), addresses: user.addresses }} onlinePixAvailable={Boolean(process.env.MERCADOPAGO_ACCESS_TOKEN && process.env.MERCADOPAGO_WEBHOOK_SECRET)} />
     </div>
   );
 }

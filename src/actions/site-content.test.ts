@@ -27,8 +27,8 @@ it("never accepts a complete card number or CVV, even from an outdated browser",
   const reference = { brand: "VISA", holderName: "Teste", last4: "1234", expMonth: 12, expYear: new Date().getFullYear() + 1 };
   expect((await addCardAction({ ...reference, number: "4111111111111111", cvv: "123" })).success).toBe(false);
   expect(m.create).not.toHaveBeenCalled();
-  expect((await addCardAction(reference)).success).toBe(true);
-  expect(m.create).toHaveBeenCalledWith({ data: { ...reference, userId: "user" } });
+  expect((await addCardAction(reference)).success).toBe(false);
+  expect(m.create).not.toHaveBeenCalled();
   await deleteCardAction("foreign-card");
   expect(m.deleteMany).toHaveBeenCalledWith({ where: { id: "foreign-card", userId: "user" } });
 });

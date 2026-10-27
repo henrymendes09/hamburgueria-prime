@@ -4,7 +4,7 @@ export const DEFAULT_FAQS = [
   { q: "Qual o tempo médio de entrega?", a: "Nosso tempo médio é de 35 a 50 minutos, dependendo da sua região e do movimento do dia." },
   { q: "Vocês entregam em toda a cidade?", a: "Ao inserir seu CEP no checkout, você verá se sua região está coberta e o valor da entrega." },
   { q: "Posso agendar meu pedido?", a: "Sim! No checkout, escolha a opção de entrega agendada e selecione o melhor dia e horário para você." },
-  { q: "Quais formas de pagamento vocês aceitam?", a: "Você pode escolher cartão ou dinheiro no recebimento. O Pix depende da disponibilidade indicada no checkout." },
+  { q: "Quais formas de pagamento vocês aceitam?", a: "No site, o pagamento é por Pix, conforme disponibilidade no checkout. No recebimento, você pode escolher Pix, crédito, débito ou dinheiro. Para cartão, informe a bandeira no pedido." },
   { q: "Como funciona a política de cancelamento?", a: "Pedidos podem ser cancelados enquanto estiverem com status 'Recebido'. Após aceito pela cozinha, entre em contato com a loja." },
 ];
 const text = (max: number) => z.string().trim().max(max);

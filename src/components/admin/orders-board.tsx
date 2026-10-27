@@ -1,4 +1,5 @@
 "use client";
+import { paymentDescription } from "@/lib/payment-options";
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -12,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatMoney, formatDateTime, PAYMENT_LABEL } from "@/lib/utils";
+import { formatMoney, formatDateTime } from "@/lib/utils";
 import { updateOrderStatusAction, assignEntregadorAction } from "@/actions/orders";
 import { playNotificationSound } from "@/lib/notification-sound";
 
@@ -31,6 +32,7 @@ type BoardOrder = {
   number: number;
   status: string;
   paymentMethod: string;
+  paymentCardBrand?: string | null;
   total: number;
   notes: string | null;
   createdAt: string;
@@ -184,7 +186,7 @@ export function OrdersBoard({
                   </div>
 
                   <div className="flex items-center justify-between border-t border-ink/5 pt-2">
-                    <span className="text-xs font-semibold text-ash">{PAYMENT_LABEL[order.paymentMethod]}</span>
+                    <span className="text-xs font-semibold text-ash">{paymentDescription(order)}</span>
                     <span className="font-display text-base text-flame">{formatMoney(order.total)}</span>
                   </div>
 

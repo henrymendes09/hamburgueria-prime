@@ -1,8 +1,9 @@
 "use client";
+import { paymentDescription } from "@/lib/payment-options";
 
 import { FileSpreadsheet, FileText, DollarSign, ShoppingBag, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatMoney, formatDateTime, ORDER_STATUS_LABEL, PAYMENT_LABEL } from "@/lib/utils";
+import { formatMoney, formatDateTime, ORDER_STATUS_LABEL } from "@/lib/utils";
 
 type OrderRow = {
   number: number;
@@ -10,6 +11,8 @@ type OrderRow = {
   status: string;
   total: number;
   paymentMethod: string;
+  paymentCardBrand?: string | null;
+  deliveryType?: string;
   createdAt: string;
 };
 
@@ -28,7 +31,7 @@ export function FinanceiroManager({
       `#${o.number}`,
       o.customer,
       ORDER_STATUS_LABEL[o.status],
-      PAYMENT_LABEL[o.paymentMethod],
+      paymentDescription(o),
       o.total.toFixed(2).replace(".", ","),
       formatDateTime(o.createdAt),
     ]);
@@ -126,7 +129,7 @@ export function FinanceiroManager({
                   <td className="py-2 font-semibold">#{o.number}</td>
                   <td className="py-2 normal-case">{o.customer}</td>
                   <td className="py-2 normal-case">{ORDER_STATUS_LABEL[o.status]}</td>
-                  <td className="py-2 normal-case">{PAYMENT_LABEL[o.paymentMethod]}</td>
+                  <td className="py-2 normal-case">{paymentDescription(o)}</td>
                   <td className="py-2">{formatMoney(o.total)}</td>
                   <td className="py-2 text-xs text-ash-light normal-case">{formatDateTime(o.createdAt)}</td>
                 </tr>

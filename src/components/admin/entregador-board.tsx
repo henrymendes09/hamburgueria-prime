@@ -1,10 +1,11 @@
 "use client";
+import { paymentDescription } from "@/lib/payment-options";
 
 import { useState } from "react";
 import { toast } from "sonner";
 import { MapPin, Phone, Navigation, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatMoney, PAYMENT_LABEL } from "@/lib/utils";
+import { formatMoney } from "@/lib/utils";
 import { entregadorUpdateStatusAction } from "@/actions/orders";
 
 type Order = {
@@ -13,6 +14,8 @@ type Order = {
   status: string;
   total: number;
   paymentMethod: string;
+  paymentCardBrand?: string | null;
+  deliveryType?: string;
   user: { name: string; phone: string | null };
   address: { street: string; number: string; neighborhood: string; city: string } | null;
   items: { id: string; productName: string; quantity: number }[];
@@ -77,7 +80,7 @@ export function EntregadorBoard({ initialOrders }: { initialOrders: Order[] }) {
                   {item.quantity}x {item.productName}
                 </p>
               ))}
-              <p className="text-xs text-ash-light font-semibold">{PAYMENT_LABEL[order.paymentMethod]}</p>
+              <p className="text-xs text-ash-light font-semibold">{paymentDescription(order)}</p>
             </div>
 
             {address && (

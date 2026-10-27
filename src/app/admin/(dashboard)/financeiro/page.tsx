@@ -38,6 +38,8 @@ export default async function AdminFinanceiroPage() {
         status: o.status,
         total: o.total,
         paymentMethod: o.paymentMethod,
+        paymentCardBrand: o.paymentCardBrand,
+        deliveryType: o.deliveryType,
         createdAt: o.createdAt.toISOString(),
       }))}
     />

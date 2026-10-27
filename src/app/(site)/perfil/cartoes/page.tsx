@@ -1,12 +1,7 @@
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import { CardManager } from "@/components/site/card-manager";
+import { redirect } from "next/navigation";
 
 export const metadata = { title: "Cartões" };
 
-export default async function CartoesPage() {
-  const session = await auth();
-  const cards = await prisma.card.findMany({ where: { userId: session!.user.id } });
-
-  return <CardManager cards={cards} />;
+export default function CartoesPage() {
+  redirect("/perfil");
 }

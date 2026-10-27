@@ -85,6 +85,9 @@ export const ORDER_STATUS_STEPS = [
 ] as const;
 
 export const PAYMENT_LABEL: Record<string, string> = {
+  PIX_ENTREGA: "Pix na entrega",
+  CREDITO: "Crédito na entrega",
+  DEBITO: "Débito na entrega",
   PIX: "PIX — pago agora",
   CARTAO: "Cartão na entrega",
   DINHEIRO: "Dinheiro na entrega",

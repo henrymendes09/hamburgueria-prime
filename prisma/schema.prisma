@@ -415,6 +415,9 @@ enum PaymentMethod {
   PIX
   CARTAO
   DINHEIRO
+  PIX_ENTREGA
+  CREDITO
+  DEBITO
 }
 
 enum PaymentStatus {
@@ -439,6 +442,7 @@ model Order {
   deliveryType       DeliveryType  @default(ENTREGA)
   scheduledFor       DateTime?
   paymentMethod      PaymentMethod
+  paymentCardBrand   String?
   paymentStatus      PaymentStatus @default(PENDENTE)
   paymentExternalId  String?
   pixQrCode          String?
