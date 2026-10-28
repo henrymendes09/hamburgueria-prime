@@ -9,7 +9,7 @@ export function MapSection({ name, address, phone, businessHours, primaryColor }
       <div className="flex flex-col justify-center gap-5 rounded-2xl bg-ink p-8 text-paper">
         {address && <div className="flex items-start gap-3"><MapPin className="mt-0.5 h-5 w-5 shrink-0" style={{ color: primaryColor }} /><p className="text-sm normal-case">{address}</p></div>}
         {phone && <div className="flex items-start gap-3"><Phone className="mt-0.5 h-5 w-5 shrink-0" style={{ color: primaryColor }} /><p className="text-sm normal-case">{phone}</p></div>}
-        {businessHours && <div className="flex items-start gap-3"><Clock className="mt-0.5 h-5 w-5 shrink-0" style={{ color: primaryColor }} /><p className="text-sm normal-case">{businessHours}</p></div>}
+        {businessHours && <div className="flex items-start gap-3"><Clock className="mt-0.5 h-5 w-5 shrink-0" style={{ color: primaryColor }} /><p className="whitespace-pre-line text-sm normal-case leading-relaxed">{businessHours}</p></div>}
       </div>
     </div>
   </section>;

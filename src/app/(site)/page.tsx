@@ -14,6 +14,7 @@ import { storeStatus } from "@/lib/store-hours";
 export default async function HomePage() {
   const session = await auth();
   const restaurant = await getPublicRestaurant();
+  const operation = storeStatus(restaurant.operationSettings);
 
   const [featured, coupon, reviews, favorites] = await Promise.all([
     prisma.product.findMany({
@@ -65,7 +66,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <Hero deliveryEstimate={storeStatus(restaurant.operationSettings).deliveryEstimate} />
+      <Hero deliveryEstimate={operation.deliveryEstimate} />
       <CategoryStrip />
 
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
@@ -97,7 +98,7 @@ export default async function HomePage() {
       </div>
 
       <Testimonials reviews={reviews} />
-      <MapSection name={restaurant.name} address={restaurant.address} phone={restaurant.phone} businessHours={restaurant.businessHours} primaryColor={restaurant.primaryColor} />
+      <MapSection name={restaurant.name} address={restaurant.address} phone={restaurant.phone} businessHours={operation.hours} primaryColor={restaurant.primaryColor} />
     </>
   );
 }

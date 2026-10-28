@@ -2,8 +2,10 @@ import Link from "next/link";
 /* eslint-disable @next/next/no-img-element */
 import type { Restaurant } from "@prisma/client";
 import { MessageCircle, MapPin, Phone, Mail, Clock } from "lucide-react";
+import { describeHours, resolveOperation } from "@/lib/store-hours";
 
 export function Footer({ restaurant }: { restaurant: Restaurant }) {
+  const hours = describeHours(resolveOperation(restaurant.operationSettings));
   const initials = restaurant.name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase();
   return <footer className="bg-ink text-paper">
     <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6">
@@ -39,7 +41,7 @@ export function Footer({ restaurant }: { restaurant: Restaurant }) {
         </div>
         <div>
           <h3 className="mb-4 font-display text-sm tracking-wide" style={{ color: restaurant.primaryColor }}>Horário</h3>
-          <p className="flex items-start gap-2 text-sm text-paper/70"><Clock className="h-4 w-4 shrink-0" />{restaurant.businessHours || "Horário não informado"}</p>
+          <p className="flex items-start gap-2 text-sm leading-relaxed text-paper/70"><Clock className="mt-0.5 h-4 w-4 shrink-0" /><span className="whitespace-pre-line">{hours}</span></p>
         </div>
       </div>
       <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-xs text-paper/40 sm:flex-row">
