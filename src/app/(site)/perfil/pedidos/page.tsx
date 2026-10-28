@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { formatMoney, formatDateTime, ORDER_STATUS_LABEL } from "@/lib/utils";
 import { Package } from "lucide-react";
+import { ReorderButton } from "@/components/site/reorder-button";
 import { getPublicRestaurant } from "@/lib/tenant";
 
 export const metadata = { title: "Meus pedidos" };
@@ -42,11 +43,11 @@ export default async function PedidosPage() {
   return (
     <div className="space-y-4">
       {orders.map((order) => (
-        <Link
+        <article
           key={order.id}
-          href={`/pedido/${order.id}`}
-          className="flex items-center justify-between rounded-2xl border-2 border-ink/5 p-5 hover:border-flame/30 hover:shadow-md transition-all"
+          className="rounded-2xl border-2 border-ink/5 p-5"
         >
+          <Link href={`/pedido/${order.id}`} className="flex items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="font-display text-base text-ink">Pedido #{order.number}</span>
@@ -58,7 +59,9 @@ export default async function PedidosPage() {
             </p>
           </div>
           <span className="font-display text-lg text-flame">{formatMoney(order.total)}</span>
-        </Link>
+          </Link>
+          <div className="mt-4"><ReorderButton orderId={order.id} /></div>
+        </article>
       ))}
     </div>
   );

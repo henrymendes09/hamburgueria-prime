@@ -6,11 +6,15 @@ import { Star, Heart, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatMoney, cn } from "@/lib/utils";
 import { ProductCardData } from "@/types/product";
-import { ProductModal } from "@/components/site/product-modal";
+import dynamic from "next/dynamic";
 import { toggleFavoriteAction } from "@/actions/reviews";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+
+const ProductModal = dynamic(() => import("@/components/site/product-modal").then(module => module.ProductModal), {
+  loading: () => <div role="status" className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50"><p className="rounded-xl bg-paper px-6 py-4 font-semibold">Abrindo produto…</p></div>,
+});
 
 export function ProductCard({ product }: { product: ProductCardData }) {
   const [open, setOpen] = useState(false);
@@ -109,7 +113,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
         </div>
       </article>
 
-      <ProductModal product={product} open={open} onOpenChange={setOpen} />
+      {open && <ProductModal product={product} open={open} onOpenChange={setOpen} />}
     </>
   );
 }

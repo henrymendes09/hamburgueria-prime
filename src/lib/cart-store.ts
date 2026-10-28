@@ -16,6 +16,7 @@ type CartState = {
   ownerId: string | null;
   isOpen: boolean;
   addItem: (item: Omit<CartItem, "cartItemId">) => void;
+  replaceItems: (items: CartItem[]) => void;
   removeItem: (cartItemId: string) => void;
   updateQuantity: (cartItemId: string, quantity: number) => void;
   applyCoupon: (coupon: CouponState) => void;
@@ -39,6 +40,7 @@ export const useCartStore = create<CartState>()(
       coupon: null,
       ownerId: null,
       isOpen: false,
+      replaceItems: (items) => set({ items: items.map(item => ({ ...item, cartItemId: crypto.randomUUID() })), coupon: null, isOpen: true }),
       addItem: (item) => {
         const cartItemId = `${item.productId}-${Date.now()}-${Math.random()
           .toString(36)

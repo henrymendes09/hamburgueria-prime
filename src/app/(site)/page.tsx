@@ -12,8 +12,7 @@ import { getPublicRestaurant } from "@/lib/tenant";
 import { storeStatus } from "@/lib/store-hours";
 
 export default async function HomePage() {
-  const session = await auth();
-  const restaurant = await getPublicRestaurant();
+  const [session, restaurant] = await Promise.all([auth(), getPublicRestaurant()]);
   const operation = storeStatus(restaurant.operationSettings);
 
   const [featured, coupon, reviews, favorites] = await Promise.all([

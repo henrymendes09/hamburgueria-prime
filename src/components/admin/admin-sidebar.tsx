@@ -18,12 +18,14 @@ import {
   FilePenLine,
   Clock,
   History,
+  ChefHat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/pedidos", label: "Pedidos", icon: ClipboardList },
+  { href: "/admin/cozinha", label: "Cozinha", icon: ChefHat },
   { href: "/admin/cardapio", label: "Cardápio", icon: UtensilsCrossed },
   { href: "/admin/cupons", label: "Cupons", icon: Tag },
   { href: "/admin/clientes", label: "Clientes", icon: Users },
@@ -49,7 +51,7 @@ export function AdminSidebar({ userName, restaurantSlug }: { userName: string; r
           <span className="font-display text-sm">Painel Admin</span>
         </div>
 
-        <nav className="flex-1 space-y-1 px-3 py-4">
+        <nav className="flex-1 overflow-y-auto space-y-1 px-3 py-4">
           {LINKS.map((link) => {
             const active = pathname === link.href;
             return (

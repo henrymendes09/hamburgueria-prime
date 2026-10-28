@@ -19,8 +19,7 @@ export default async function CardapioPage({
   searchParams: Promise<{ categoria?: string; busca?: string }>;
 }) {
   const { categoria, busca } = await searchParams;
-  const session = await auth();
-  const restaurant = await getPublicRestaurant();
+  const [session, restaurant] = await Promise.all([auth(), getPublicRestaurant()]);
 
   const [categories, products, favorites] = await Promise.all([
     prisma.category.findMany({ where: { restaurantId: restaurant.id }, orderBy: { order: "asc" } }),

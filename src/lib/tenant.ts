@@ -4,11 +4,12 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { cache } from "react";
 
 export const DEFAULT_RESTAURANT_SLUG = "hamburgueria-prime";
 export const RESTAURANT_COOKIE = "hp_restaurant";
 
-export async function getPublicRestaurant() {
+export const getPublicRestaurant = cache(async function getPublicRestaurant() {
   const requestHeaders = await headers();
   const explicitSlug = requestHeaders.get("x-restaurant-slug");
   const selectedSlug = (await cookies()).get(RESTAURANT_COOKIE)?.value;
@@ -24,7 +25,7 @@ export async function getPublicRestaurant() {
   });
   if (restaurant) return restaurant;
   return prisma.restaurant.findUniqueOrThrow({ where: { slug: process.env.DEFAULT_RESTAURANT_SLUG || DEFAULT_RESTAURANT_SLUG } });
-}
+});
 
 export async function requireRestaurantAdmin() {
   const session = await auth();

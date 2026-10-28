@@ -1,29 +1,48 @@
-// Toca um "ding" de duas notas usando a Web Audio API — nenhum arquivo de
-// áudio externo é necessário, então funciona 100% offline.
+﻿let context: AudioContext | undefined;
+function audioContext() {
+  const AudioContextClass =
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext: typeof AudioContext })
+      .webkitAudioContext;
+  if (!context || context.state === "closed") context = new AudioContextClass();
+  return context;
+}
+export async function enableNotificationSound() {
+  try {
+    const ctx = audioContext();
+    await ctx.resume();
+    return ctx.state === "running";
+  } catch {
+    return false;
+  }
+}
 export function playNotificationSound() {
   try {
-    const AudioContextClass =
-      window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    const ctx = new AudioContextClass();
-
-    const playTone = (freq: number, startTime: number, duration: number) => {
-      const oscillator = ctx.createOscillator();
-      const gain = ctx.createGain();
+    const ctx = audioContext();
+    if (ctx.state !== "running") return false;
+    for (const [frequency, offset, duration] of [
+      [880, 0, 0.18],
+      [1174.66, 0.16, 0.25],
+    ]) {
+      const oscillator = ctx.createOscillator(),
+        gain = ctx.createGain(),
+        start = ctx.currentTime + offset;
       oscillator.type = "sine";
-      oscillator.frequency.value = freq;
-      gain.gain.setValueAtTime(0.0001, startTime);
-      gain.gain.exponentialRampToValueAtTime(0.3, startTime + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+      oscillator.frequency.value = frequency;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.3, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
       oscillator.connect(gain);
       gain.connect(ctx.destination);
-      oscillator.start(startTime);
-      oscillator.stop(startTime + duration);
-    };
-
-    const now = ctx.currentTime;
-    playTone(880, now, 0.18);
-    playTone(1174.66, now + 0.16, 0.25);
+      oscillator.onended = () => {
+        oscillator.disconnect();
+        gain.disconnect();
+      };
+      oscillator.start(start);
+      oscillator.stop(start + duration);
+    }
+    return true;
   } catch {
-    // Ambiente sem suporte a Web Audio (raro) — falha silenciosamente
+    return false;
   }
 }
