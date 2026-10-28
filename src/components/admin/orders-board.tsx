@@ -147,14 +147,14 @@ export function OrdersBoard({
           return (
             <div key={col.status} className="space-y-3">
               <div className={`flex items-center justify-between border-b-2 ${col.color} pb-2`}>
-                <h2 className="font-display text-sm text-ink">{col.title}</h2>
+                <h2 style={{ fontFamily: "var(--font-body)", textTransform: "none" }} className="text-sm font-bold text-ink">{col.title}</h2>
                 <span className="rounded-full bg-ink/5 px-2 py-0.5 text-xs font-bold">{columnOrders.length}</span>
               </div>
 
               {columnOrders.map((order) => (
                 <div key={order.id} className="rounded-2xl bg-white border-2 border-ink/5 p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-display text-base text-ink">#{order.number}</span>
+                    <span className="text-base font-bold text-ink">#{order.number}</span>
                     <span className="text-xs text-ash-light flex items-center gap-1">
                       <Clock className="h-3 w-3" /> {formatDateTime(order.createdAt).split(" ")[1]}
                     </span>
@@ -187,7 +187,7 @@ export function OrdersBoard({
 
                   <div className="flex items-center justify-between border-t border-ink/5 pt-2">
                     <span className="text-xs font-semibold text-ash">{paymentDescription(order)}</span>
-                    <span className="font-display text-base text-flame">{formatMoney(order.total)}</span>
+                    <span className="text-base font-bold tabular-nums text-flame">{formatMoney(order.total)}</span>
                   </div>
 
                   {col.status === "PREPARANDO" && entregadores.length > 0 && (

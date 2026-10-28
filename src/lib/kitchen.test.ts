@@ -1,5 +1,10 @@
 import { expect, it } from "vitest";
-import { waitingMinutes, newKitchenOrders, type KitchenOrder } from "./kitchen";
+import { waitingMinutes, newKitchenOrders, preparationIngredients, type KitchenOrder } from "./kitchen";
+it("lists preparation ingredients without removed items or blank/duplicate entries", () => {
+  expect(preparationIngredients("Pão, Carne, Cebola, Queijo, , Carne", "cebola")).toEqual(["Pão", "Carne", "Queijo"]);
+  expect(preparationIngredients("", null)).toEqual([]);
+  expect(preparationIngredients("Carne, Cebola", "Carne, Cebola")).toEqual([]);
+});
 it("counts elapsed waiting time across midnight without negative times", () => {
   expect(
     waitingMinutes("2026-10-28T23:55:00Z", Date.parse("2026-10-29T00:15:59Z")),

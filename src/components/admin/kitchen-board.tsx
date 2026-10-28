@@ -277,6 +277,7 @@ export function KitchenBoard({
                             <p className="text-base font-bold">
                               {item.quantity}× {item.productName}
                             </p>
+                            <p className="mt-2 text-sm leading-relaxed text-ash"><span className="font-semibold text-ink">Ingredientes do cardápio: </span>{item.ingredients?.length ? item.ingredients.join(", ") : "Nenhum ingrediente base listado."}</p>
                             {item.addonsLabel && (
                               <p className="mt-1 text-sm text-ash">
                                 + {item.addonsLabel}

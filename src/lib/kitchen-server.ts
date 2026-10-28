@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import type { KitchenOrder } from "@/lib/kitchen";
+import { preparationIngredients } from "@/lib/kitchen";
 export async function getKitchenOrders(
   restaurantId: string,
 ): Promise<KitchenOrder[]> {
@@ -28,6 +29,7 @@ export async function getKitchenOrders(
           addonsLabel: true,
           removedLabel: true,
           notes: true,
+          product: { select: { ingredients: true, restaurantId: true } },
         },
       },
     },
@@ -35,6 +37,13 @@ export async function getKitchenOrders(
   });
   return orders.map((order) => ({
     ...order,
+    items: order.items.map(({ product, ...item }) => ({
+      ...item,
+      ingredients:
+        product.restaurantId === restaurantId
+          ? preparationIngredients(product.ingredients, item.removedLabel)
+          : [],
+    })),
     createdAt: order.createdAt.toISOString(),
     scheduledFor: order.scheduledFor?.toISOString() ?? null,
   }));

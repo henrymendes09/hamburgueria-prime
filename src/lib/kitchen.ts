@@ -13,11 +13,32 @@ export type KitchenOrder = {
     id: string;
     productName: string;
     quantity: number;
+    ingredients: string[];
     addonsLabel: string | null;
     removedLabel: string | null;
     notes: string | null;
   }[];
 };
+export function preparationIngredients(
+  ingredients: string,
+  removedLabel: string | null,
+) {
+  const removed = new Set(
+    (removedLabel?.split(",") ?? []).map((value) =>
+      value.trim().toLocaleLowerCase("pt-BR"),
+    ),
+  );
+  return [
+    ...new Set(
+      ingredients
+        .split(",")
+        .map((value) => value.trim())
+        .filter(
+          (value) => value && !removed.has(value.toLocaleLowerCase("pt-BR")),
+        ),
+    ),
+  ];
+}
 export function waitingMinutes(createdAt: string, now: number) {
   return Math.max(0, Math.floor((now - new Date(createdAt).getTime()) / 60000));
 }

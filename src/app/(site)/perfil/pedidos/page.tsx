@@ -49,16 +49,16 @@ export default async function PedidosPage() {
         >
           <Link href={`/pedido/${order.id}`} className="flex items-center justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="font-display text-base text-ink">Pedido #{order.number}</span>
+            <div className="flex flex-wrap items-center gap-2 mb-1">
+              <span className="text-base font-bold text-ink">Pedido #{order.number}</span>
               <Badge variant={STATUS_VARIANT[order.status]}>{ORDER_STATUS_LABEL[order.status]}</Badge>
             </div>
-            <p className="text-xs text-ash-light normal-case">{formatDateTime(order.createdAt)}</p>
+            <p className="text-xs text-ash normal-case">{formatDateTime(order.createdAt)}</p>
             <p className="text-sm text-ash normal-case mt-1">
               {order.items.length} {order.items.length === 1 ? "item" : "itens"}
             </p>
           </div>
-          <span className="font-display text-lg text-flame">{formatMoney(order.total)}</span>
+          <span className="shrink-0 whitespace-nowrap text-lg font-bold tabular-nums text-flame">{formatMoney(order.total)}</span>
           </Link>
           <div className="mt-4"><ReorderButton orderId={order.id} /></div>
         </article>
