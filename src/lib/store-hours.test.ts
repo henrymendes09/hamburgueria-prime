@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { operationDefaults, operationSchema, isWithinStoreHours, storeStatus, validateOrderSchedule } from "./store-hours";
+import { describeHours, operationDefaults, operationSchema, isWithinStoreHours, storeStatus, validateOrderSchedule } from "./store-hours";
 function regular() { const settings = operationDefaults(); settings.acceptingOrders = true; settings.days[2] = { enabled: true, opens: "18:00", closes: "23:00" }; return settings; }
 it("does not open a store with missing hours or manual pause", () => {
   expect(storeStatus(null).open).toBe(false);
@@ -48,4 +48,19 @@ it("validates cutoffs within overnight shifts including a cutoff before midnight
   expect(isWithinStoreHours(settings, new Date("2026-10-28T03:30:00Z"))).toBe(false);
   settings.days[2].ordersUntil = "17:00";
   expect(operationSchema.safeParse(settings).success).toBe(false);
+});
+it("groups configured weekdays without displaying the order cutoff", () => {
+  const settings = operationDefaults();
+  for (let day = 1; day <= 5; day++) settings.days[day] = { enabled: true, opens: "18:00", closes: "23:00", ordersUntil: "22:30" };
+  expect(describeHours(settings)).toBe("Trabalhamos de segunda a sexta, das 18h às 23h.");
+  settings.days[0].enabled = true; settings.days[6].enabled = true;
+  expect(describeHours(settings)).toBe("Trabalhamos todos os dias, das 18h às 23h.");
+});
+it("groups Wednesday through Sunday and preserves different or nonconsecutive schedules", () => {
+  const settings = operationDefaults();
+  for (const day of [3,4,5,6,0]) settings.days[day].enabled = true;
+  expect(describeHours(settings)).toBe("Trabalhamos de quarta a domingo, das 18h às 23h.");
+  settings.days[6].closes = "02:30";
+  expect(describeHours(settings)).toBe("Trabalhamos quarta, quinta, sexta e domingo, das 18h às 23h.\nSábado, das 18h às 2h30 do dia seguinte.");
+  expect(describeHours(null)).toBe("Horários ainda não configurados pela loja.");
 });

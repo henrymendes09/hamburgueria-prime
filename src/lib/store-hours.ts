@@ -42,7 +42,22 @@ export function isWithinStoreHours(settings: OperationSettings, at: Date) {
 }
 export function describeHours(settings: OperationSettings | null) {
   if (!settings || !settings.days.some(day => day.enabled)) return "Horários ainda não configurados pela loja.";
-  return settings.days.flatMap((day, index) => day.enabled ? [`${WEEK_DAYS[index]}: ${day.opens} às ${day.closes}${day.closes < day.opens ? " (dia seguinte)" : ""}; pedidos até ${day.ordersUntil ?? day.closes}${(day.ordersUntil ?? day.closes) < day.opens ? " (dia seguinte)" : ""}`] : []).join(" · ");
+  const names = ["segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo"];
+  const groups = new Map<string, { days: number[]; opens: string; closes: string }>();
+  [1, 2, 3, 4, 5, 6, 0].forEach((dayIndex, position) => {
+    const day = settings.days[dayIndex];
+    if (!day.enabled) return;
+    const key = `${day.opens}-${day.closes}`, group = groups.get(key) ?? { days: [], opens: day.opens, closes: day.closes };
+    group.days.push(position); groups.set(key, group);
+  });
+  const hour = (value: string) => `${Number(value.slice(0, 2))}h${value.endsWith(":00") ? "" : value.slice(3)}`;
+  return [...groups.values()].map(({ days, opens, closes }, index) => {
+    const contiguous = days.every((day, i) => i === 0 || day === days[i - 1] + 1);
+    const labels = days.map(day => names[day]);
+    const daysText = days.length === 7 ? "todos os dias" : contiguous && days.length >= 3 ? `de ${labels[0]} a ${labels.at(-1)}` : labels.length === 1 ? labels[0] : `${labels.slice(0, -1).join(", ")} e ${labels.at(-1)}`;
+    const sentence = `${daysText}, das ${hour(opens)} às ${hour(closes)}${closes < opens ? " do dia seguinte" : ""}.`;
+    return index === 0 ? `Trabalhamos ${sentence}` : sentence.charAt(0).toUpperCase() + sentence.slice(1);
+  }).join("\n");
 }
 export function storeStatus(raw: unknown, at = new Date()) {
   const settings = resolveOperation(raw);
