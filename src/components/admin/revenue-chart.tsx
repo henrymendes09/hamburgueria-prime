@@ -14,7 +14,7 @@ export function RevenueChart({ data }: { data: { date: string; total: number }[]
           formatter={((value: number | string) => formatMoney(Number(value))) as (value: unknown) => string}
           contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }}
         />
-        <Line type="monotone" dataKey="total" stroke="#e01b22" strokeWidth={3} dot={{ fill: "#e01b22", r: 4 }} />
+        <Line name="Recebido" type="monotone" dataKey="total" stroke="#e01b22" strokeWidth={3} dot={data.length <= 31 ? { fill: "#e01b22", r: 3 } : false} />
       </LineChart>
     </ResponsiveContainer>
   );

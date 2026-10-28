@@ -1,5 +1,20 @@
 export type FinancialOrder = { status: string; paymentStatus: string; paymentMethod: string; total: number; subtotal: number; deliveryFee: number; discount: number; deliveryPayout: number; paymentFee: number | null };
 const cents = (value: number) => Math.round(value * 100);
+export function revenueSeries(orders: { createdAt: Date; status: string; paymentStatus: string; total: number }[], from: string, to: string) {
+  const totals = new Map<string, number>();
+  const formatter = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" });
+  for (const order of orders) {
+    if (order.paymentStatus !== "PAGO" || ["CANCELADO", "RECUSADO"].includes(order.status)) continue;
+    const day = formatter.format(order.createdAt);
+    totals.set(day, (totals.get(day) ?? 0) + cents(order.total));
+  }
+  const result: { date: string; total: number }[] = [];
+  for (let at = Date.parse(from + "T12:00:00Z"), end = Date.parse(to + "T12:00:00Z"); at <= end; at += 86400000) {
+    const day = new Date(at).toISOString().slice(0, 10);
+    result.push({ date: `${day.slice(8, 10)}/${day.slice(5, 7)}`, total: (totals.get(day) ?? 0) / 100 });
+  }
+  return result;
+}
 export function summarizeFinancialOrders(orders: FinancialOrder[]) {
   const result = { received: 0, pending: 0, cancelled: 0, refunded: 0, failed: 0, grossProducts: 0, deliveryFees: 0, discounts: 0, driverPayouts: 0, paymentFees: 0, missingPaymentFees: 0, paidOrders: 0, totalOrders: orders.length, cancelledOrders: 0, netAfterKnownCosts: 0, avgTicket: 0 };
   for (const order of orders) {

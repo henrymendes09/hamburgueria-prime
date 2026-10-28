@@ -7,10 +7,16 @@ export const operationSchema = z.object({
   acceptingOrders: z.boolean(),
   timeZone: z.string().max(80).refine(value => { try { new Intl.DateTimeFormat("pt-BR", { timeZone: value }); return true; } catch { return false; } }, "Fuso horário inválido."),
   deliveryMin: z.number().int().min(5).max(300), deliveryMax: z.number().int().min(5).max(300),
-  days: z.array(z.object({ enabled: z.boolean(), opens: time, closes: time })).length(7),
+  days: z.array(z.object({ enabled: z.boolean(), opens: time, closes: time, ordersUntil: time.optional() })).length(7),
 }).superRefine((value, ctx) => {
   if (value.deliveryMax < value.deliveryMin) ctx.addIssue({ code: "custom", message: "O prazo máximo deve ser maior ou igual ao mínimo." });
   value.days.forEach((day, index) => { if (day.enabled && day.opens === day.closes) ctx.addIssue({ code: "custom", path: ["days", index], message: "Abertura e fechamento precisam ter horários diferentes." }); });
+  value.days.forEach((day, index) => {
+    if (!day.enabled || !day.ordersUntil) return;
+    const start = minutes(day.opens), duration = (minutes(day.closes) - start + 1440) % 1440;
+    const cutoff = (minutes(day.ordersUntil) - start + 1440) % 1440;
+    if (cutoff === 0 || cutoff > duration) ctx.addIssue({ code: "custom", path: ["days", index, "ordersUntil"], message: `${WEEK_DAYS[index]}: o limite para pedidos deve ficar entre a abertura e o fechamento.` });
+  });
   if (value.acceptingOrders && !value.days.some(day => day.enabled)) ctx.addIssue({ code: "custom", message: "Selecione pelo menos um dia de funcionamento." });
 });
 export type OperationSettings = z.infer<typeof operationSchema>;
@@ -29,14 +35,14 @@ export function isWithinStoreHours(settings: OperationSettings, at: Date) {
   const current = Number(part("hour")) * 60 + Number(part("minute"));
   const today = settings.days[day], yesterday = settings.days[(day + 6) % 7];
   if (today?.enabled) {
-    const start = minutes(today.opens), end = minutes(today.closes);
+    const start = minutes(today.opens), end = minutes(today.ordersUntil ?? today.closes);
     if (start < end ? current >= start && current < end : current >= start) return true;
   }
-  return Boolean(yesterday?.enabled && minutes(yesterday.opens) > minutes(yesterday.closes) && current < minutes(yesterday.closes));
+  return Boolean(yesterday?.enabled && minutes(yesterday.opens) > minutes(yesterday.ordersUntil ?? yesterday.closes) && current < minutes(yesterday.ordersUntil ?? yesterday.closes));
 }
 export function describeHours(settings: OperationSettings | null) {
   if (!settings || !settings.days.some(day => day.enabled)) return "Horários ainda não configurados pela loja.";
-  return settings.days.flatMap((day, index) => day.enabled ? [`${WEEK_DAYS[index]}: ${day.opens} às ${day.closes}${day.closes < day.opens ? " (dia seguinte)" : ""}`] : []).join(" · ");
+  return settings.days.flatMap((day, index) => day.enabled ? [`${WEEK_DAYS[index]}: ${day.opens} às ${day.closes}${day.closes < day.opens ? " (dia seguinte)" : ""}; pedidos até ${day.ordersUntil ?? day.closes}${(day.ordersUntil ?? day.closes) < day.opens ? " (dia seguinte)" : ""}`] : []).join(" · ");
 }
 export function storeStatus(raw: unknown, at = new Date()) {
   const settings = resolveOperation(raw);
