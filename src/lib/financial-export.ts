@@ -1,6 +1,14 @@
 import { prisma } from "./prisma";
 import { financialPeriod, revenueSeries, summarizeFinancialOrders, type FinancialOrder } from "./financial-report";
 import { ORDER_STATUS_LABEL } from "./utils";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { parse, type Font } from "opentype.js";
+
+let reportFont: Promise<Font> | undefined;
+function loadReportFont() {
+  return reportFont ??= readFile(join(process.cwd(), "node_modules/@fontsource/inter/files/inter-latin-400-normal.woff")).then(bytes => parse(Uint8Array.from(bytes).buffer));
+}
 
 export type ExportOrder = FinancialOrder & { number: number; customer: string; createdAt: Date; paymentCardBrand: string | null; deliveryType: string; items: { name: string; quantity: number; unitPrice: number }[] };
 export type FinancialExport = ReturnType<typeof buildFinancialExport>;
@@ -38,11 +46,24 @@ export function reportNotes(report: FinancialExport) {
 }
 export async function receiptChart(report: FinancialExport) {
   const { default: sharp } = await import("sharp");
+  const font = await loadReportFont();
+  // Draw letters as paths: production containers do not necessarily have system fonts.
+  const label = (text: string, x: number, y: number, size = 26, anchor = "start", color = "#666") => {
+    const glyphs = Array.from(text, character => font.charToGlyph(character));
+    const width = glyphs.reduce((total, glyph) => total + (glyph.advanceWidth ?? 0) * size / font.unitsPerEm, 0);
+    const left = anchor === "end" ? x - width : anchor === "middle" ? x - width / 2 : x;
+    let cursor = left;
+    return glyphs.map(glyph => {
+      const path = glyph.getPath(cursor, y, size, {}, font).toPathData(2);
+      cursor += (glyph.advanceWidth ?? 0) * size / font.unitsPerEm;
+      return `<path d="${path}" fill="${color}"/>`;
+    }).join("");
+  };
   const data = report.revenue, max = Math.max(1, ...data.map(day => day.total));
   const x = (i: number) => 82 + i * 1070 / Math.max(1, data.length - 1), y = (value: number) => 245 - value / max * 185;
   const points = data.map((day, i) => `${x(i)},${y(day.total)}`).join(" ");
-  const ticks = Array.from({ length: 4 }, (_, i) => { const value = max * i / 3; return `<line x1="82" x2="1152" y1="${y(value)}" y2="${y(value)}" stroke="#e5e7eb"/><text x="70" y="${y(value) + 5}" text-anchor="end">${value.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}</text>`; }).join("");
-  const labels = data.flatMap((day, i) => i === 0 || i === data.length - 1 || i % Math.max(1, Math.ceil(data.length / 6)) === 0 ? [`<text x="${x(i)}" y="275" text-anchor="middle">${day.date}</text>`] : []).join("");
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300"><rect width="1200" height="300" fill="white"/><g font-family="Arial,sans-serif" font-size="26" fill="#666"><text x="82" y="28" font-size="28" fill="#171717">Recebimentos por dia (R$)</text>${ticks}${labels}<polyline points="${points}" fill="none" stroke="#e01b22" stroke-width="4"/>${data.length === 1 ? `<circle cx="82" cy="${y(data[0].total)}" r="5" fill="#e01b22"/>` : ""}</g></svg>`;
+  const ticks = Array.from({ length: 4 }, (_, i) => { const value = max * i / 3; return `<line x1="82" x2="1152" y1="${y(value)}" y2="${y(value)}" stroke="#e5e7eb"/>${label(value.toLocaleString("pt-BR", { maximumFractionDigits: 0 }), 70, y(value) + 5, 26, "end")}`; }).join("");
+  const labels = data.flatMap((day, i) => i === 0 || i === data.length - 1 || i % Math.max(1, Math.ceil(data.length / 6)) === 0 ? [label(day.date, x(i), 275, 26, "middle")] : []).join("");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300"><rect width="1200" height="300" fill="white"/>${label("Recebimentos por dia (R$)", 82, 28, 28, "start", "#171717")}${ticks}${labels}<polyline points="${points}" fill="none" stroke="#e01b22" stroke-width="4"/>${data.length === 1 ? `<circle cx="82" cy="${y(data[0].total)}" r="5" fill="#e01b22"/>` : ""}</svg>`;
   return sharp(Buffer.from(svg)).png().toBuffer();
 }
