@@ -10,8 +10,26 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { getPublicRestaurant } from "@/lib/tenant";
 import { storeStatus } from "@/lib/store-hours";
+import { Suspense } from "react";
 
 export default async function HomePage() {
+  const restaurant = await getPublicRestaurant();
+  const operation = storeStatus(restaurant.operationSettings);
+  return <>
+    <Hero deliveryEstimate={operation.deliveryEstimate} />
+    <CategoryStrip />
+    <Suspense fallback={<HomeProductsSkeleton />}><HomeContent /></Suspense>
+  </>;
+}
+
+function HomeProductsSkeleton() {
+  return <section aria-label="Carregando destaques" aria-busy="true" className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <div className="mb-8"><span className="text-xs font-bold uppercase tracking-widest text-flame">Mais pedidos</span><h2 className="mt-2 font-display text-3xl sm:text-4xl">Destaques da casa</h2></div>
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">{Array.from({ length: 8 }, (_, index) => <div key={index} className="overflow-hidden rounded-2xl border-2 border-ink/5 bg-white" aria-hidden="true"><div className="aspect-[4/3] bg-ink/5" /><div className="h-56 p-4"><div className="h-5 w-3/4 rounded bg-ink/5" /><div className="mt-4 h-12 rounded bg-ink/5" /></div></div>)}</div>
+  </section>;
+}
+
+async function HomeContent() {
   const [session, restaurant] = await Promise.all([auth(), getPublicRestaurant()]);
   const operation = storeStatus(restaurant.operationSettings);
 
@@ -65,9 +83,6 @@ export default async function HomePage() {
 
   return (
     <>
-      <Hero deliveryEstimate={operation.deliveryEstimate} />
-      <CategoryStrip />
-
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="mb-8 flex items-end justify-between">
           <div>

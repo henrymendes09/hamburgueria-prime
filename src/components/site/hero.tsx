@@ -62,7 +62,8 @@ export function Hero({ deliveryEstimate }: { deliveryEstimate: string }) {
               src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=900&q=80"
               alt="Hambúrguer artesanal Hamburgueria Prime com queijo derretido e bacon"
               fill
-              priority
+              loading="eager"
+              fetchPriority="high"
               className="relative object-contain drop-shadow-2xl"
               sizes="(max-width: 1024px) 90vw, 500px"
             />
