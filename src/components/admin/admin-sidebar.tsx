@@ -60,7 +60,7 @@ export function AdminSidebar({
 
         <nav
           aria-label="Módulos administrativos"
-          className="min-h-0 flex-1 overflow-y-auto no-scrollbar px-3 py-2"
+          className="grid min-h-0 flex-1 auto-rows-fr gap-1 overflow-y-auto no-scrollbar px-3 py-2"
         >
           {LINKS.map((link) => {
             const active = pathname === link.href;
@@ -69,7 +69,7 @@ export function AdminSidebar({
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "flex h-[clamp(24px,4.5dvh,36px)] items-center gap-3 rounded-lg px-3 text-[13px] font-semibold transition-colors",
+                  "flex h-full min-h-5 items-center gap-3 rounded-lg px-3 text-[13px] font-semibold transition-colors",
                   active
                     ? "bg-flame text-white"
                     : "text-paper/70 hover:bg-white/5 hover:text-paper",
