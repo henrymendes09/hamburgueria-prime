@@ -62,7 +62,7 @@ export async function receiptChart(report: FinancialExport) {
   const data = report.revenue, max = Math.max(1, ...data.map(day => day.total));
   const x = (i: number) => 82 + i * 1070 / Math.max(1, data.length - 1), y = (value: number) => 245 - value / max * 185;
   const points = data.map((day, i) => `${x(i)},${y(day.total)}`).join(" ");
-  const ticks = Array.from({ length: 4 }, (_, i) => { const value = max * i / 3; return `<line x1="82" x2="1152" y1="${y(value)}" y2="${y(value)}" stroke="#e5e7eb"/>${label(value.toLocaleString("pt-BR", { maximumFractionDigits: 0 }), 70, y(value) + 5, 26, "end")}`; }).join("");
+  const ticks = Array.from({ length: 4 }, (_, i) => { const value = max * i / 3; return `<line x1="82" x2="1152" y1="${y(value)}" y2="${y(value)}" stroke="#e5e7eb"/>${label(value.toLocaleString("pt-BR", { maximumFractionDigits: max < 10 ? 2 : 0 }), 70, y(value) + 5, 26, "end")}`; }).join("");
   const labels = data.flatMap((day, i) => i === 0 || i === data.length - 1 || i % Math.max(1, Math.ceil(data.length / 6)) === 0 ? [label(day.date, x(i), 275, 26, "middle")] : []).join("");
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300"><rect width="1200" height="300" fill="white"/>${label("Recebimentos por dia (R$)", 82, 28, 28, "start", "#171717")}${ticks}${labels}<polyline points="${points}" fill="none" stroke="#e01b22" stroke-width="4"/>${data.length === 1 ? `<circle cx="82" cy="${y(data[0].total)}" r="5" fill="#e01b22"/>` : ""}</svg>`;
   return sharp(Buffer.from(svg)).png().toBuffer();
