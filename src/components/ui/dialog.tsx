@@ -22,9 +22,9 @@ function DialogOverlay({ className, ...props }: React.ComponentPropsWithoutRef<t
   );
 }
 
-function DialogContent({ className, children, ...props }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>) {
+function DialogContent({ className, children, portalContainer, ...props }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { portalContainer?: HTMLElement | null }) {
   return (
-    <DialogPortal>
+    <DialogPortal container={portalContainer ?? undefined}>
       <DialogOverlay />
       <DialogPrimitive.Content
         className={cn(

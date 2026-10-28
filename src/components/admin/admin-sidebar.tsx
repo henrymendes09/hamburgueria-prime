@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
@@ -38,20 +38,30 @@ const LINKS = [
   { href: "/admin/configuracoes", label: "Configurações", icon: Settings },
 ];
 
-export function AdminSidebar({ userName, restaurantSlug }: { userName: string; restaurantSlug?: string }) {
+export function AdminSidebar({
+  userName,
+  restaurantSlug,
+}: {
+  userName: string;
+  restaurantSlug?: string;
+}) {
   const pathname = usePathname();
+  const router = useRouter();
 
   return (
     <>
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-ink text-paper lg:flex">
-        <div className="flex items-center gap-2 px-6 py-6 border-b border-white/10">
-          <div className="stamp flex h-9 w-9 items-center justify-center rounded-full bg-flame font-display text-sm">
+        <div className="flex h-14 shrink-0 items-center gap-2 px-5 border-b border-white/10">
+          <div className="stamp flex h-8 w-8 items-center justify-center rounded-full bg-flame font-display text-sm">
             HP
           </div>
           <span className="font-display text-sm">Painel Admin</span>
         </div>
 
-        <nav className="flex-1 overflow-y-auto space-y-1 px-3 py-4">
+        <nav
+          aria-label="Módulos administrativos"
+          className="min-h-0 flex-1 overflow-y-auto no-scrollbar px-3 py-2"
+        >
           {LINKS.map((link) => {
             const active = pathname === link.href;
             return (
@@ -59,8 +69,10 @@ export function AdminSidebar({ userName, restaurantSlug }: { userName: string; r
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
-                  active ? "bg-flame text-white" : "text-paper/70 hover:bg-white/5 hover:text-paper"
+                  "flex h-[clamp(24px,4.5dvh,36px)] items-center gap-3 rounded-lg px-3 text-[13px] font-semibold transition-colors",
+                  active
+                    ? "bg-flame text-white"
+                    : "text-paper/70 hover:bg-white/5 hover:text-paper",
                 )}
               >
                 <link.icon className="h-4 w-4" /> {link.label}
@@ -69,43 +81,47 @@ export function AdminSidebar({ userName, restaurantSlug }: { userName: string; r
           })}
         </nav>
 
-        <div className="border-t border-white/10 p-3 space-y-1">
+        <div className="shrink-0 border-t border-white/10 px-3 py-2">
           <Link
             href={restaurantSlug ? `/loja/${restaurantSlug}` : "/"}
             target="_blank"
-            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-paper/70 hover:bg-white/5"
+            className="flex h-8 items-center gap-3 rounded-lg px-3 text-xs font-semibold text-paper/70 hover:bg-white/5"
           >
             <ExternalLink className="h-4 w-4" /> Ver site
           </Link>
-          <div className="px-3 py-2 text-xs text-paper/40 normal-case truncate">{userName}</div>
+          <div className="px-3 py-1 text-[11px] text-paper/40 normal-case truncate">
+            {userName}
+          </div>
           <button
             onClick={() => signOut({ callbackUrl: "/admin/login" })}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-paper/70 hover:bg-white/5"
+            className="flex h-8 w-full items-center gap-3 rounded-lg px-3 text-xs font-semibold text-paper/70 hover:bg-white/5"
           >
             <LogOut className="h-4 w-4" /> Sair
           </button>
         </div>
       </aside>
 
-      <div className="sticky top-0 z-30 flex items-center gap-2 overflow-x-auto bg-ink px-3 py-3 lg:hidden">
-        {LINKS.map((link) => {
-          const active = pathname === link.href;
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={cn(
-                "whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-bold uppercase",
-                active ? "bg-flame text-white" : "bg-white/5 text-paper/70"
-              )}
-            >
-              {link.label}
-            </Link>
-          );
-        })}
+      <div className="sticky top-0 z-30 flex items-center gap-3 bg-ink px-3 py-2 lg:hidden">
+        <label className="min-w-0 flex-1 text-xs text-paper/70">
+          <span className="sr-only">Módulo administrativo</span>
+          <select
+            aria-label="Módulo administrativo"
+            value={
+              LINKS.some((link) => link.href === pathname) ? pathname : "/admin"
+            }
+            onChange={(event) => router.push(event.target.value)}
+            className="min-h-11 w-full rounded-lg border-white/15 bg-ink-soft px-3 text-sm font-semibold text-paper"
+          >
+            {LINKS.map((link) => (
+              <option key={link.href} value={link.href}>
+                {link.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <button
           onClick={() => signOut({ callbackUrl: "/admin/login" })}
-          className="whitespace-nowrap rounded-full bg-white/5 px-3 py-1.5 text-xs font-bold uppercase text-paper/70"
+          className="min-h-11 shrink-0 rounded-lg bg-white/5 px-3 text-xs font-bold uppercase text-paper/70"
         >
           Sair
         </button>

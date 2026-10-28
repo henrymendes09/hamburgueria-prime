@@ -40,7 +40,8 @@ export async function updateOrderStatusAction(
   if (!order) return { success: false, message: "Pedido não encontrado." };
 
   const allowed = NEXT_STATUS[order.status] ?? [];
-  if (!allowed.includes(newStatus)) {
+  const completedPickup = order.status === "PREPARANDO" && order.deliveryType === "RETIRADA" && newStatus === "ENTREGUE";
+  if (!allowed.includes(newStatus) && !completedPickup) {
     return { success: false, message: `Não é possível mudar de ${order.status} para ${newStatus}.` };
   }
 
@@ -68,6 +69,7 @@ export async function updateOrderStatusAction(
 
   emitOrderEvent({ type: "status-update", restaurantId: order.restaurantId, orderId, status: newStatus });
   revalidatePath("/admin/pedidos");
+  revalidatePath("/admin/cozinha");
   revalidatePath(`/pedido/${orderId}`);
   return { success: true, message: "Status atualizado." };
 }

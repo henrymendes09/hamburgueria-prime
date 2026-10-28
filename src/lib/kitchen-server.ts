@@ -7,7 +7,7 @@ export async function getKitchenOrders(
   const orders = await prisma.order.findMany({
     where: {
       restaurantId,
-      status: { in: ["RECEBIDO", "ACEITO", "PREPARANDO"] },
+      status: { in: ["RECEBIDO", "ACEITO", "PREPARANDO", "SAIU_PARA_ENTREGA"] },
     },
     select: {
       id: true,

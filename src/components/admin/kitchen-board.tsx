@@ -10,15 +10,23 @@ import {
 } from "@/lib/notification-sound";
 import {
   newKitchenOrders,
+  kitchenActions,
   waitingMinutes,
   type KitchenOrder,
 } from "@/lib/kitchen";
 import { formatDateTime } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 const columns = [
   { status: "RECEBIDO", title: "Novos pedidos", color: "bg-blue-500" },
   { status: "ACEITO", title: "Na fila", color: "bg-amber-500" },
   { status: "PREPARANDO", title: "Em preparação", color: "bg-flame" },
+  { status: "SAIU_PARA_ENTREGA", title: "Em entrega", color: "bg-purple-500" },
 ];
 export function KitchenBoard({
   initialOrders,
@@ -30,6 +38,11 @@ export function KitchenBoard({
   const [sound, setSound] = useState(false);
   const [connected, setConnected] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<{
+    order: KitchenOrder;
+    next: string;
+    label: string;
+  } | null>(null);
   const root = useRef<HTMLDivElement>(null);
   const seen = useRef(new Set(initialOrders.map((order) => order.id)));
   const soundEnabled = useRef(false);
@@ -108,22 +121,24 @@ export function KitchenBoard({
         "O navegador não liberou o som. Verifique as permissões de áudio.",
       );
   }
-  async function changeStatus(order: KitchenOrder) {
+  async function changeStatus(order: KitchenOrder, next: string) {
     setBusy(order.id);
     version.current++;
     try {
-      const next = order.status === "RECEBIDO" ? "ACEITO" : "PREPARANDO";
       const result = await updateOrderStatusAction(order.id, next);
       if (!result.success) {
         toast.error(result.message);
         return;
       }
       setOrders((current) =>
-        current.map((item) =>
-          item.id === order.id ? { ...item, status: next } : item,
-        ),
+        ["ENTREGUE", "CANCELADO", "RECUSADO"].includes(next)
+          ? current.filter((item) => item.id !== order.id)
+          : current.map((item) =>
+              item.id === order.id ? { ...item, status: next } : item,
+            ),
       );
-      toast.success(next === "ACEITO" ? "Pedido aceito" : "Preparo iniciado");
+      setConfirmation(null);
+      toast.success(result.message);
     } catch {
       toast.error("Não foi possível atualizar o pedido.");
     } finally {
@@ -190,7 +205,7 @@ export function KitchenBoard({
           ? "Atualização automática a cada 5 segundos. Mantenha esta tela aberta e ative o som para ouvir novos pedidos."
           : "Sem atualização. Verifique a conexão; os pedidos abaixo podem estar desatualizados. Tentando reconectar…"}
       </p>
-      <div className="grid gap-5 xl:grid-cols-3">
+      <div className="grid gap-5 md:grid-cols-2 2xl:grid-cols-4">
         {columns.map((column) => (
           <section
             key={column.status}
@@ -290,26 +305,26 @@ export function KitchenBoard({
                           Aguardando confirmação do Pix
                         </p>
                       )}
-                      {order.status !== "PREPARANDO" ? (
-                        <button
-                          disabled={!!busy || !connected || pendingPix}
-                          onClick={() => changeStatus(order)}
-                          className="min-h-12 w-full rounded-xl bg-ink px-3 py-3 text-sm font-bold text-white disabled:opacity-40"
-                        >
-                          {busy === order.id
-                            ? "Atualizando…"
-                            : order.status === "RECEBIDO"
-                              ? "Aceitar pedido"
-                              : "Iniciar preparo"}
-                        </button>
-                      ) : (
-                        <Link
-                          href="/admin/pedidos"
-                          className="flex min-h-12 items-center justify-center rounded-xl bg-flame px-3 text-center text-sm font-bold text-white"
-                        >
-                          Gerenciar saída / retirada
-                        </Link>
-                      )}
+                      <div className="space-y-2">
+                        {kitchenActions(order).map((action, index) => (
+                          <button
+                            key={action.next}
+                            disabled={
+                              !!busy ||
+                              !connected ||
+                              (pendingPix && action.next === "ACEITO")
+                            }
+                            onClick={() =>
+                              action.confirm
+                                ? setConfirmation({ order, ...action })
+                                : void changeStatus(order, action.next)
+                            }
+                            className={`min-h-11 w-full rounded-xl px-3 py-3 text-sm font-bold disabled:opacity-40 ${index === 0 ? "bg-ink text-white" : "border border-red-200 text-red-700 hover:bg-red-50"}`}
+                          >
+                            {busy === order.id ? "Atualizando…" : action.label}
+                          </button>
+                        ))}
+                      </div>
                     </article>
                   );
                 })}
@@ -322,6 +337,38 @@ export function KitchenBoard({
           </section>
         ))}
       </div>
+      <Dialog
+        open={!!confirmation}
+        onOpenChange={(open) => {
+          if (!open && !busy) setConfirmation(null);
+        }}
+      >
+        <DialogContent portalContainer={typeof document === "undefined" ? undefined : document.fullscreenElement as HTMLElement | null} className="w-[calc(100%-2rem)] p-6">
+          <DialogTitle className="pr-8">{confirmation?.label}?</DialogTitle>
+          <DialogDescription>
+            {confirmation?.next === "ENTREGUE"
+              ? `Confirme somente após entregar o pedido #${confirmation.order.number} ao cliente.${confirmation.order.paymentMethod !== "PIX" ? " O pagamento na entrega será registrado como recebido." : ""}`
+              : `Deseja ${confirmation?.next === "RECUSADO" ? "recusar" : "cancelar"} o pedido #${confirmation?.order.number}? Se houver pagamento online, o cancelamento ou estorno será solicitado ao provedor.`}
+          </DialogDescription>
+          <button
+            disabled={!!busy || !connected}
+            onClick={() =>
+              confirmation &&
+              void changeStatus(confirmation.order, confirmation.next)
+            }
+            className="min-h-11 rounded-full bg-flame px-4 py-3 font-bold text-white disabled:opacity-40"
+          >
+            {busy ? "Atualizando…" : "Confirmar"}
+          </button>
+          <button
+            disabled={!!busy}
+            onClick={() => setConfirmation(null)}
+            className="min-h-11 rounded-full border px-4 py-3 font-semibold"
+          >
+            Voltar
+          </button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
