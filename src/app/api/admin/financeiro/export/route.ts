@@ -1,15 +1,28 @@
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { financialPeriod, csvCell, summarizeFinancialOrders } from "@/lib/financial-report";
+import { financialPeriod, csvCell } from "@/lib/financial-report";
+import { composition, dateTimeBR, loadFinancialExport, orderStatusLabel, PAYMENT_STATUS_LABEL } from "@/lib/financial-export";
 import { paymentDescription } from "@/lib/payment-options";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
 export async function GET(request: Request) {
   const session = await auth();
-  if (!session?.user?.id || session.user.blocked || session.user.role !== "ADMIN" || !session.user.restaurantId) return new Response("Não autorizado", { status: 401 });
+  if (!session?.user?.id || session.user.blocked || session.user.role !== "ADMIN" || !session.user.restaurantId) return new Response("Não autorizado", { status: 401, headers: { "Cache-Control": "private, no-store" } });
   const params = new URL(request.url).searchParams, period = financialPeriod(params.get("de") ?? undefined, params.get("ate") ?? undefined);
   if (period.invalid) return new Response("Período inválido", { status: 400 });
-  const orders = await prisma.order.findMany({ where: { restaurantId: session.user.restaurantId, createdAt: { gte: period.start, lt: period.end } }, include: { user: { select: { name: true } } }, orderBy: { createdAt: "desc" } });
-  const totals = summarizeFinancialOrders(orders);
-  const rows: unknown[][] = [["Relatório financeiro", period.from, period.to], ["Recebido", totals.received], ["Pendente", totals.pending], ["Cancelados/recusados (valor dos pedidos)", totals.cancelled], ["Estornado", totals.refunded], ["Frete cobrado", totals.deliveryFees], ["Descontos", totals.discounts], ["Repasses de entregas concluídas", totals.driverPayouts], ["Taxas de pagamento informadas", totals.paymentFees], ["Recebido menos taxas informadas e repasses (não é lucro)", totals.netAfterKnownCosts], [], ["Pedido", "Cliente", "Status", "Situação pagamento", "Forma", "Subtotal", "Frete", "Desconto", "Total", "Taxa pagamento", "Repasse entregador", "Criado em (Brasília)"]];
-  for (const order of orders) rows.push([order.number, order.user.name, order.status, order.paymentStatus, paymentDescription(order), order.subtotal, order.deliveryFee, order.discount, order.total, order.paymentFee ?? "Não informada", order.deliveryPayout, order.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })]);
-  return new Response("\uFEFF" + rows.map(row => row.map(csvCell).join(";")).join("\r\n"), { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="financeiro-${period.from}-${period.to}.csv"`, "Cache-Control": "private, no-store" } });
+  const format = params.get("formato") ?? "xlsx";
+  if (!["xlsx", "pdf", "csv"].includes(format)) return new Response("Formato inválido", { status: 400 });
+  const report = await loadFinancialExport(session.user.restaurantId, period);
+  const headers = { "Content-Disposition": `attachment; filename="financeiro-${period.from}-${period.to}.${format}"`, "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" };
+  if (format === "pdf") {
+    const { financialPdf } = await import("@/lib/financial-pdf");
+    return new Response(await financialPdf(report), { headers: { ...headers, "Content-Type": "application/pdf" } });
+  }
+  if (format === "xlsx") {
+    const { financialWorkbook } = await import("@/lib/financial-workbook");
+    return new Response(await financialWorkbook(report), { headers: { ...headers, "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" } });
+  }
+  const rows: unknown[][] = [["Relatório financeiro", period.from, period.to], ["Recebido", report.summary.received], ["Pendente", report.summary.pending], ...composition(report), [], ["Pedido", "Cliente", "Situação", "Pagamento", "Forma", "Produtos", "Frete", "Desconto", "Total", "Taxa", "Repasse", "Criado em (Brasília)"]];
+  for (const order of report.orders) rows.push([order.number, order.customer, orderStatusLabel(order.status), PAYMENT_STATUS_LABEL[order.paymentStatus] ?? "A confirmar", paymentDescription(order), order.subtotal, order.deliveryFee, order.discount, order.total, order.paymentFee ?? "Não informada", order.deliveryPayout, dateTimeBR(order.createdAt)]);
+  return new Response("\uFEFF" + rows.map(row => row.map(csvCell).join(";")).join("\r\n"), { headers: { ...headers, "Content-Type": "text/csv; charset=utf-8" } });
 }
