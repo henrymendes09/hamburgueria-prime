@@ -1,5 +1,10 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import menuIngredients from "./data/menu-ingredients.json";
+
+function composition(name: string, fallback: string) {
+  return (menuIngredients as Record<string, string>)[slugify(name)] ?? fallback;
+}
 
 const prisma = new PrismaClient();
 
@@ -114,7 +119,7 @@ async function main() {
         name,
         slug: slugify(name),
         description,
-        ingredients,
+        ingredients: composition(name, ingredients),
         image: menuImage(name),
         price: Number(price.toFixed(2)),
         promoPrice: hasPromo ? Number((price * 0.85).toFixed(2)) : null,
@@ -162,7 +167,7 @@ async function main() {
         name,
         slug: slugify(name),
         description: "Gelado e pronto para acompanhar seu lanche.",
-        ingredients: name,
+        ingredients: composition(name, name),
         image: menuImage(name),
         price,
         categoryId: catDrink.id,
@@ -191,7 +196,7 @@ async function main() {
         name,
         slug: slugify(name),
         description,
-        ingredients: "batata, sal, temperos da casa",
+        ingredients: composition(name, "batata, sal, temperos da casa"),
         image: menuImage(name),
         price,
         categoryId: catFries.id,
@@ -230,7 +235,7 @@ async function main() {
         name,
         slug: slugify(name),
         description,
-        ingredients: "ingredientes selecionados da casa",
+        ingredients: composition(name, "ingredientes selecionados da casa"),
         image: menuImage(name),
         price,
         categoryId: catDessert.id,
@@ -263,9 +268,9 @@ async function main() {
         description: isFamily
           ? "4 hambúrgueres, 2 porções de batata grande e 4 refrigerantes — perfeito para compartilhar."
           : `${burger.name} + batata frita média + refrigerante lata.`,
-        ingredients: isFamily
+        ingredients: composition(name, isFamily
           ? "4 hambúrgueres da casa, batata frita, refrigerante"
-          : `${burger.name}, batata frita, refrigerante`,
+          : `${burger.name}, batata frita, refrigerante`),
         image: menuImage(name),
         price: Number(price.toFixed(2)),
         promoPrice: i % 3 === 0 ? Number((price * 0.9).toFixed(2)) : null,
