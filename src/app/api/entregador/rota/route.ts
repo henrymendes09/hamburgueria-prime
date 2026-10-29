@@ -73,6 +73,7 @@ export async function POST(request: Request) {
       { status: 409 },
     );
   try {
+    const deadline = Date.now() + 35000;
     const origin =
       parsed.data.origin ??
       (await geocodeAddress(
@@ -86,6 +87,7 @@ export async function POST(request: Request) {
     const ordered = ids.map((id) => orders.find((o) => o.id === id)!);
     const points = [origin];
     for (const order of ordered) {
+      if (Date.now() > deadline) throw Error("Alguns endereços demoraram para ser localizados. Organize as paradas manualmente ou tente novamente.");
       const a = order.address!;
       const point =
         a.latitude != null && a.longitude != null
@@ -103,7 +105,7 @@ export async function POST(request: Request) {
     const response = await fetch(
       `https://router.project-osrm.org/table/v1/driving/${coordinates}?annotations=duration`,
       { cache: "no-store", signal: AbortSignal.timeout(10000) },
-    );
+    ).catch(() => { throw Error("O serviço de rotas está indisponível. Organize as paradas manualmente ou tente novamente."); });
     if (!response.ok)
       throw Error(
         "O serviço de rotas está indisponível. Você pode organizar as paradas manualmente.",

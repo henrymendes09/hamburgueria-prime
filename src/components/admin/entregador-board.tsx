@@ -150,7 +150,7 @@ export function EntregadorBoard({
           throw Error("Localização indisponível. Escolha sair da loja.");
         const position = await new Promise<GeolocationPosition>(
           (resolve, reject) =>
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
+            navigator.geolocation.getCurrentPosition(resolve, () => reject(new Error("Não foi possível acessar sua localização. Permita o acesso no navegador ou escolha sair da loja.")), {
               enableHighAccuracy: true,
               timeout: 10000,
               maximumAge: 60000,
