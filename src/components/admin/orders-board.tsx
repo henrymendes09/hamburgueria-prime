@@ -190,7 +190,7 @@ export function OrdersBoard({
                     <span className="text-base font-bold tabular-nums text-flame">{formatMoney(order.total)}</span>
                   </div>
 
-                  {col.status === "PREPARANDO" && entregadores.length > 0 && (
+                  {["PREPARANDO", "SAIU_PARA_ENTREGA"].includes(col.status) && order.deliveryType === "ENTREGA" && entregadores.length > 0 && (
                     <Select
                       value={order.entregador?.id}
                       onValueChange={(v) => handleAssignEntregador(order.id, v)}

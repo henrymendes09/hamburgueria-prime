@@ -48,6 +48,8 @@ export function EquipeManager({ staff: initial }: { staff: Staff[] }) {
         </Button>
       </div>
 
+      <p className="mb-5 rounded-xl border border-ink/10 bg-white p-4 text-sm text-ash">O motoboy acessa <a href="/entregador/login" target="_blank" rel="noopener noreferrer" className="font-bold text-flame underline">a área do entregador</a> com o e-mail e a senha cadastrados aqui. Atribua as entregas em Pedidos para que ele veja os endereços e organize sua rota.</p>
+
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {staff.map((member) => (
           <div key={member.id} className="flex items-center gap-3 rounded-2xl bg-white border-2 border-ink/5 p-4">

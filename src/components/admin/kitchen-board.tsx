@@ -26,7 +26,6 @@ const columns = [
   { status: "RECEBIDO", title: "Novos pedidos", color: "bg-blue-500" },
   { status: "ACEITO", title: "Na fila", color: "bg-amber-500" },
   { status: "PREPARANDO", title: "Em preparação", color: "bg-flame" },
-  { status: "SAIU_PARA_ENTREGA", title: "Em entrega", color: "bg-purple-500" },
 ];
 export function KitchenBoard({
   initialOrders,
@@ -205,7 +204,7 @@ export function KitchenBoard({
           ? "Atualização automática a cada 5 segundos. Mantenha esta tela aberta e ative o som para ouvir novos pedidos."
           : "Sem atualização. Verifique a conexão; os pedidos abaixo podem estar desatualizados. Tentando reconectar…"}
       </p>
-      <div className="grid gap-5 md:grid-cols-2 2xl:grid-cols-4">
+      <div className="grid gap-5 xl:grid-cols-3">
         {columns.map((column) => (
           <section
             key={column.status}

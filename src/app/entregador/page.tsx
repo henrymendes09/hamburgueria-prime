@@ -4,11 +4,16 @@ import { signOut } from "@/lib/auth";
 import { EntregadorBoard } from "@/components/admin/entregador-board";
 import { LogOut } from "lucide-react";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { getDriverOrders } from "@/lib/driver-server";
 
 export async function generateMetadata(): Promise<Metadata> {
   const session = await auth();
   const restaurant = session?.user?.restaurantId
-    ? await prisma.restaurant.findUnique({ where: { id: session.user.restaurantId }, select: { name: true, slug: true } })
+    ? await prisma.restaurant.findUnique({
+        where: { id: session.user.restaurantId },
+        select: { name: true, slug: true },
+      })
     : null;
   if (!restaurant) return { title: "Meus Pedidos" };
   const tenant = encodeURIComponent(restaurant.slug);
@@ -16,19 +21,34 @@ export async function generateMetadata(): Promise<Metadata> {
     title: `Entregas | ${restaurant.name}`,
     applicationName: restaurant.name,
     manifest: `/api/pwa/manifest?loja=${tenant}`,
-    icons: { icon: `/api/pwa/icon?loja=${tenant}`, apple: `/api/pwa/icon?loja=${tenant}` },
-    appleWebApp: { capable: true, title: restaurant.name.slice(0, 18), statusBarStyle: "black-translucent" },
+    icons: {
+      icon: `/api/pwa/icon?loja=${tenant}`,
+      apple: `/api/pwa/icon?loja=${tenant}`,
+    },
+    appleWebApp: {
+      capable: true,
+      title: restaurant.name.slice(0, 18),
+      statusBarStyle: "black-translucent",
+    },
   };
 }
 
 export default async function EntregadorPage() {
   const session = await auth();
-
-  const orders = await prisma.order.findMany({
-    where: { entregadorId: session!.user.id, restaurantId: session!.user.restaurantId ?? undefined, status: { in: ["PREPARANDO", "SAIU_PARA_ENTREGA"] } },
-    include: { items: true, user: { select: { name: true, phone: true } }, address: true },
-    orderBy: { createdAt: "asc" },
-  });
+  if (
+    !session?.user?.id ||
+    session.user.blocked ||
+    session.user.role !== "ENTREGADOR" ||
+    !session.user.restaurantId
+  )
+    redirect("/entregador/login");
+  const [orders, restaurant] = await Promise.all([
+    getDriverOrders(session.user.restaurantId, session.user.id),
+    prisma.restaurant.findUnique({
+      where: { id: session.user.restaurantId },
+      select: { name: true, address: true, storeCep: true },
+    }),
+  ]);
 
   return (
     <div className="min-h-screen bg-paper-dim">
@@ -37,7 +57,12 @@ export default async function EntregadorPage() {
           <div className="stamp flex h-9 w-9 items-center justify-center rounded-full bg-flame font-display text-sm">
             HP
           </div>
-          <span className="font-display text-sm">Área do Entregador</span>
+          <div>
+            <span className="text-sm font-bold">Área do Entregador</span>
+            <p className="text-xs text-white/60">
+              {restaurant?.name} · {session.user.name}
+            </p>
+          </div>
         </div>
         <form
           action={async () => {
@@ -52,7 +77,16 @@ export default async function EntregadorPage() {
       </header>
 
       <div className="p-5">
-        <EntregadorBoard initialOrders={JSON.parse(JSON.stringify(orders))} />
+        <EntregadorBoard
+          initialOrders={orders}
+          storeAddress={
+            restaurant?.address
+              ? [restaurant.address, restaurant.storeCep, "Brasil"]
+                  .filter(Boolean)
+                  .join(", ")
+              : ""
+          }
+        />
       </div>
     </div>
   );

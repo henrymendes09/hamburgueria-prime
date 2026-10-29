@@ -40,7 +40,7 @@ export async function geocodeCep(cep: string): Promise<Coordinates | null> {
   }
 }
 
-async function geocodeAddress(address: string | undefined, cep: string) {
+export async function geocodeAddress(address: string | undefined, cep: string) {
   if (address?.trim()) {
     try {
       const query = encodeURIComponent(`${address}, ${cep}, Brasil`);

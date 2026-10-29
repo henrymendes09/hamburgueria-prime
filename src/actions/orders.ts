@@ -82,9 +82,11 @@ export async function assignEntregadorAction(
   const restaurantId = session.user.restaurantId!;
   const entregador = await prisma.user.findFirst({ where: { id: entregadorId, restaurantId, role: "ENTREGADOR" } });
   if (!entregador || entregador.blocked) return { success: false, message: "Entregador não encontrado." };
-  await audited(session, tx => tx.order.updateMany({ where: { id: orderId, restaurantId }, data: { entregadorId } }));
+  const result = await audited(session, tx => tx.order.updateMany({ where: { id: orderId, restaurantId, deliveryType: "ENTREGA", status: { in: ["PREPARANDO", "SAIU_PARA_ENTREGA"] } }, data: { entregadorId } }));
+  if (!result.count) return { success: false, message: "Pedido indisponível para atribuição." };
   after(() => deliverOrderEmails({ restaurantId: session.user.restaurantId!, orderId }));
   revalidatePath("/admin/pedidos");
+  revalidatePath("/entregador");
   return { success: true, message: "Entregador atribuído." };
 }
 
@@ -98,7 +100,7 @@ export async function entregadorUpdateStatusAction(
   }
   if (!session.user.restaurantId || !["SAIU_PARA_ENTREGA", "ENTREGUE"].includes(newStatus)) return { success: false, message: "Operação inválida." };
   const order = await prisma.order.findFirst({
-    where: { id: orderId, entregadorId: session.user.id, restaurantId: session.user.restaurantId },
+    where: { id: orderId, entregadorId: session.user.id, restaurantId: session.user.restaurantId, deliveryType: "ENTREGA" },
   });
   if (!order) return { success: false, message: "Pedido não encontrado." };
 
@@ -116,6 +118,10 @@ export async function entregadorUpdateStatusAction(
   }));
   after(() => deliverOrderEmails({ restaurantId: session.user.restaurantId!, orderId }));
 
+  emitOrderEvent({ type: "status-update", restaurantId: order.restaurantId, orderId, status: newStatus });
   revalidatePath("/entregador");
+  revalidatePath("/admin/pedidos");
+  revalidatePath("/admin/cozinha");
+  revalidatePath(`/pedido/${orderId}`);
   return { success: true, message: "Status atualizado." };
 }

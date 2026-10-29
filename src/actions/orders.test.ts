@@ -8,7 +8,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/order-notifications", () => ({ deliverOrderEmails: vi.fn() }));
 vi.mock("@/lib/order-events", () => ({ emitOrderEvent: vi.fn() }));
 vi.mock("@/lib/mercado-pago-payments", () => ({ cancelOrRefundPayment: vi.fn() }));
-import { updateOrderStatusAction } from "./orders";
+import { updateOrderStatusAction, entregadorUpdateStatusAction } from "./orders";
 const order = { id: "order", restaurantId: "store", status: "PREPARANDO", deliveryType: "RETIRADA", paymentMethod: "DINHEIRO", paymentStatus: "PENDENTE", acceptedAt: new Date(), deliveredAt: null };
 beforeEach(() => {
   vi.resetAllMocks();
@@ -35,4 +35,24 @@ it("still prevents accepting unconfirmed online Pix payments", async () => {
   mocks.find.mockResolvedValue({ ...order, status: "RECEBIDO", paymentMethod: "PIX" });
   expect((await updateOrderStatusAction("order", "ACEITO")).success).toBe(false);
   expect(mocks.audited).not.toHaveBeenCalled();
+});
+
+it("restricts driver updates to their assigned delivery in their own restaurant", async () => {
+  mocks.auth.mockResolvedValue({user:{id:"driver",role:"ENTREGADOR",restaurantId:"store"}});
+  mocks.find.mockResolvedValue(null);
+  expect((await entregadorUpdateStatusAction("foreign", "ENTREGUE")).success).toBe(false);
+  expect(mocks.find).toHaveBeenCalledWith({where:{id:"foreign",entregadorId:"driver",restaurantId:"store",deliveryType:"ENTREGA"}});
+  expect(mocks.audited).not.toHaveBeenCalled();
+});
+it("only allows assigned deliveries to be completed after dispatch and records offline payment", async () => {
+  mocks.auth.mockResolvedValue({user:{id:"driver",role:"ENTREGADOR",restaurantId:"store"}});
+  expect((await entregadorUpdateStatusAction("order", "ENTREGUE")).success).toBe(false);
+  mocks.find.mockResolvedValue({...order,deliveryType:"ENTREGA",status:"SAIU_PARA_ENTREGA"});
+  expect((await entregadorUpdateStatusAction("order", "ENTREGUE")).success).toBe(true);
+  expect(mocks.update).toHaveBeenCalledWith(expect.objectContaining({where:expect.objectContaining({entregadorId:"driver",restaurantId:"store",status:"SAIU_PARA_ENTREGA"}),data:expect.objectContaining({status:"ENTREGUE",paymentStatus:"PAGO"})}));
+});
+it("does not allow a blocked driver to change delivery status", async () => {
+  mocks.auth.mockResolvedValue({user:{id:"driver",role:"ENTREGADOR",restaurantId:"store",blocked:true}});
+  expect((await entregadorUpdateStatusAction("order", "ENTREGUE")).success).toBe(false);
+  expect(mocks.find).not.toHaveBeenCalled();
 });
