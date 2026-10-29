@@ -77,7 +77,10 @@ it("never routes another driver, restaurant, pickup or completed delivery", asyn
 });
 it("optimizes owned deliveries with the road service and returns no customer personal data", async () => {
   m.find.mockResolvedValue([
-    { id: "owned", address: { latitude: -23.1, longitude: -46.1 } },
+    {
+      id: "owned",
+      address: { navigationLatitude: -23.1, navigationLongitude: -46.1 },
+    },
   ]);
   const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
     Response.json({
@@ -94,6 +97,7 @@ it("optimizes owned deliveries with the road service and returns no customer per
     expect(await response.json()).toEqual({
       ids: ["owned"],
       origin: "-23,-46",
+      destinations: { owned: "-23.1,-46.1" },
     });
     expect(response.headers.get("cache-control")).toContain("no-store");
   } finally {
@@ -102,19 +106,24 @@ it("optimizes owned deliveries with the road service and returns no customer per
 });
 it("fails visibly when a road segment is unreachable rather than claiming optimization", async () => {
   m.find.mockResolvedValue([
-    { id: "owned", address: { latitude: -23.1, longitude: -46.1 } },
+    {
+      id: "owned",
+      address: { navigationLatitude: -23.1, navigationLongitude: -46.1 },
+    },
+    {id:"second",address:{navigationLatitude:-23.2,navigationLongitude:-46.2}},
   ]);
   const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
     Response.json({
       code: "Ok",
       durations: [
-        [0, null],
-        [60, 0],
+        [0, null, 80],
+        [60, 0, 20],
+        [80, 20, 0],
       ],
     }),
   );
   try {
-    expect((await POST(request())).status).toBe(503);
+    expect((await POST(request(["owned", "second"]))).status).toBe(503);
   } finally {
     fetchMock.mockRestore();
   }

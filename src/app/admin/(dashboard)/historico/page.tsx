@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRestaurantAdmin } from "@/lib/tenant";
 import { auditChanges, auditRecordName } from "@/lib/audit-presentation";
 export const metadata = { title: "Histórico de ações" };
-const resources: Record<string, string> = { Product: "Produto", Category: "Categoria", Addon: "Adicional", ProductAddon: "Adicionais do produto", Order: "Pedido", Restaurant: "Configurações da loja", Coupon: "Cupom", User: "Usuário/equipe" };
+const resources: Record<string, string> = { Address:"Localização de entrega", Product: "Produto", Category: "Categoria", Addon: "Adicional", ProductAddon: "Adicionais do produto", Order: "Pedido", Restaurant: "Configurações da loja", Coupon: "Cupom", User: "Usuário/equipe" };
 const actions: Record<string, string> = { INSERT: "Criou", UPDATE: "Alterou", DELETE: "Excluiu" };
 export default async function HistoricoPage({ searchParams }: { searchParams: Promise<{ page?: string; recurso?: string }> }) {
   const { restaurantId } = await requireRestaurantAdmin(), params = await searchParams;

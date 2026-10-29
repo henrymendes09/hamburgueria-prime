@@ -21,8 +21,11 @@ import {
 import { formatMoney } from "@/lib/utils";
 import { paymentDescription } from "@/lib/payment-options";
 import { entregadorUpdateStatusAction } from "@/actions/orders";
+import { confirmDeliveryLocation } from "@/actions/driver-location";
+import { dispatchDriverOrders } from "@/actions/driver-dispatch";
 import {
   deliveryAddress,
+  navigationDestination,
   mapsRoute,
   mapsRouteSections,
   type DriverOrder,
@@ -36,8 +39,12 @@ export function EntregadorBoard({
   storeAddress: string;
 }) {
   const [orders, setOrders] = useState(initialOrders);
+  const [locationOrder, setLocationOrder] = useState<DriverOrder | null>(null);
+  const [point, setPoint] = useState("");
+  const [pointChecked, setPointChecked] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [planned, setPlanned] = useState<{
+    destinations?: Record<string, string>;
     ids: string[];
     origin?: string;
     optimized: boolean;
@@ -102,7 +109,12 @@ export function EntregadorBoard({
   let sections: ReturnType<typeof mapsRouteSections> = [];
   try {
     sections = mapsRouteSections(
-      stops.map((o) => ({ id: o.id, address: deliveryAddress(o.address!) })),
+      stops.map((o) => ({
+        id: o.id,
+        address:
+          currentPlan?.destinations?.[o.id] ??
+          navigationDestination(o.address!),
+      })),
       currentPlan?.origin ?? (!fromCurrent ? storeAddress : undefined),
     );
   } catch {
@@ -150,11 +162,20 @@ export function EntregadorBoard({
           throw Error("Localização indisponível. Escolha sair da loja.");
         const position = await new Promise<GeolocationPosition>(
           (resolve, reject) =>
-            navigator.geolocation.getCurrentPosition(resolve, () => reject(new Error("Não foi possível acessar sua localização. Permita o acesso no navegador ou escolha sair da loja.")), {
-              enableHighAccuracy: true,
-              timeout: 10000,
-              maximumAge: 60000,
-            }),
+            navigator.geolocation.getCurrentPosition(
+              resolve,
+              () =>
+                reject(
+                  new Error(
+                    "Não foi possível acessar sua localização. Permita o acesso no navegador ou escolha sair da loja.",
+                  ),
+                ),
+              {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 60000,
+              },
+            ),
         );
         origin = {
           latitude: position.coords.latitude,
@@ -169,7 +190,13 @@ export function EntregadorBoard({
       });
       const data = await response.json();
       if (!response.ok) throw Error(data.message);
-      setPlanned({ ids: data.ids, origin: data.origin, optimized: true, key });
+      setPlanned({
+        ids: data.ids,
+        origin: data.origin,
+        destinations: data.destinations,
+        optimized: true,
+        key,
+      });
       toast.success("Sequência de paradas calculada.");
     } catch (error) {
       toast.error(
@@ -181,10 +208,80 @@ export function EntregadorBoard({
       setRouteBusy(false);
     }
   }
+  async function savePoint() {
+    const values = point
+      .trim()
+      .split(/[,;]\s*|\s+/)
+      .map(Number);
+    if (
+      !locationOrder ||
+      !/^\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?\s*$/.test(point) ||
+      values.length !== 2 ||
+      values.some((v) => !Number.isFinite(v)) ||
+      Math.abs(values[0]) > 90 ||
+      Math.abs(values[1]) > 180
+    ) {
+      toast.error("Cole as coordenadas no formato latitude, longitude.");
+      return;
+    }
+    setBusy("point");
+    version.current++;
+    try {
+      const result = await confirmDeliveryLocation(
+        locationOrder.id,
+        values[0],
+        values[1],
+        deliveryAddress(locationOrder.address!),
+      );
+      if (!result.success) throw Error(result.message);
+      setOrders(prev=>prev.map(o=>o.address&&deliveryAddress(o.address)===deliveryAddress(locationOrder.address!)?{...o,address:{...o.address,navigationLatitude:values[0],navigationLongitude:values[1]}}:o));
+      setPlanned(null);
+      setLocationOrder(null);
+      await refreshRef.current();
+      toast.success(result.message);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Não foi possível salvar.",
+      );
+    } finally {
+      version.current++;
+      setBusy(null);
+      void refreshRef.current();
+    }
+  }
+  async function dispatch(routeIds: string[]) {
+    setBusy("dispatch");
+    version.current++;
+    try {
+      const result = await dispatchDriverOrders(routeIds);
+      if (!result.success) throw Error(result.message);
+      setOrders((prev) =>
+        prev.map((o) =>
+          result.dispatchedIds.includes(o.id)
+            ? { ...o, status: "SAIU_PARA_ENTREGA" }
+            : o,
+        ),
+      );
+      setSelected(routeIds);
+      toast.success(result.message);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível registrar a saída.",
+      );
+    } finally {
+      version.current++;
+      setBusy(null);
+      void refreshRef.current();
+    }
+  }
   async function update(
     order: DriverOrder,
     status: "SAIU_PARA_ENTREGA" | "ENTREGUE",
   ) {
+    if (status === "SAIU_PARA_ENTREGA")
+      return dispatch([...new Set([...ids, order.id])]);
     setBusy(order.id);
     version.current++;
     try {
@@ -282,6 +379,24 @@ export function EntregadorBoard({
           </button>
           {!!stops.length && (
             <>
+              <button
+                disabled={
+                  !!busy ||
+                  routeBusy ||
+                  !connected ||
+                  !stops.some((o) => o.status === "PREPARANDO")
+                }
+                onClick={() => void dispatch(stops.map((o) => o.id))}
+                className="mt-4 min-h-12 w-full rounded-xl bg-white px-4 font-bold text-ink disabled:opacity-50"
+              >
+                {busy === "dispatch"
+                  ? "Registrando saída…"
+                  : `Sair para entrega com ${stops.length} pedido(s)`}
+              </button>
+              <p className="mt-3 text-xs text-white/70">
+                Pedidos no mesmo endereço compartilham uma parada. A seleção
+                continua valendo para todos os pedidos.
+              </p>
               <ol className="mt-5 space-y-2">
                 {stops.map((o, i) => (
                   <li
@@ -339,7 +454,12 @@ export function EntregadorBoard({
                   </a>
                 ))}
               </div>
-              {!sections.length && <p role="alert" className="mt-3 text-sm text-white/80">Um endereço é muito longo para montar a rota. Use os links individuais dos pedidos.</p>}
+              {!sections.length && (
+                <p role="alert" className="mt-3 text-sm text-white/80">
+                  Um endereço é muito longo para montar a rota. Use os links
+                  individuais dos pedidos.
+                </p>
+              )}
               {sections.length > 1 && (
                 <p className="mt-3 text-xs text-white/70">
                   Siga os trechos na ordem. Cada trecho inclui até quatro
@@ -471,7 +591,7 @@ export function EntregadorBoard({
             </div>
             {order.address && (
               <a
-                href={mapsRoute([deliveryAddress(order.address)])}
+                href={mapsRoute([navigationDestination(order.address)])}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex min-h-12 items-center justify-center gap-2 rounded-xl border-2 px-3 text-sm font-bold"
@@ -479,6 +599,25 @@ export function EntregadorBoard({
                 <Navigation className="h-4 w-4" />
                 Ir para este endereço no Maps
               </a>
+            )}
+            {order.address && (
+              <button
+                disabled={!!busy}
+                className="min-h-11 w-full text-sm font-bold text-flame"
+                onClick={() => {
+                  setLocationOrder(order);
+                  setPoint(
+                    order.address?.navigationLatitude != null
+                      ? `${order.address.navigationLatitude}, ${order.address.navigationLongitude}`
+                      : "",
+                  );
+                  setPointChecked(false);
+                }}
+              >
+                {order.address.navigationLatitude != null
+                  ? "Ajustar ponto confirmado no mapa"
+                  : "Endereço errado no Maps? Confirmar ponto exato"}
+              </button>
             )}
             <Button
               disabled={!!busy || !connected}
@@ -498,6 +637,90 @@ export function EntregadorBoard({
           </article>
         ))}
       </div>
+      <Dialog
+        open={!!locationOrder}
+        onOpenChange={(open) => {
+          if (!open && !busy) setLocationOrder(null);
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogTitle>Confirmar ponto de entrega</DialogTitle>
+          <DialogDescription>
+            Se o Maps não reconhecer a rua, marque a localização correta da
+            casa. O endereço escrito será mantido.
+          </DialogDescription>
+          {locationOrder?.address && (
+            <>
+              <p className="text-sm font-semibold">
+                {deliveryAddress(locationOrder.address)}
+              </p>
+              <a
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-bold text-flame underline"
+                href={
+                  "https://www.google.com/maps/search/?api=1&query=" +
+                  encodeURIComponent(
+                    locationOrder.address.neighborhood +
+                      ", " +
+                      locationOrder.address.city +
+                      ", " +
+                      locationOrder.address.state +
+                      ", Brasil",
+                  )
+                }
+              >
+                Abrir o bairro no Google Maps
+              </a>
+              <p className="text-sm text-ash">
+                No Maps, encontre a casa, pressione o local para soltar um
+                alfinete e copie as coordenadas. No computador, clique com o
+                botão direito no ponto e copie os números.
+              </p>
+              <label className="text-sm font-semibold">
+                Coordenadas do ponto
+                <input
+                  value={point}
+                  onChange={(e) => {
+                    setPoint(e.target.value);
+                    setPointChecked(false);
+                  }}
+                  placeholder="Ex.: -23.123456, -45.987654"
+                  className="mt-2 min-h-11 w-full rounded-xl border px-3"
+                />
+              </label>
+              {/^\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?\s*$/.test(point) && (
+                <a
+                  className="text-sm font-bold text-flame underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  href={
+                    "https://www.google.com/maps/search/?api=1&query=" +
+                    encodeURIComponent(point)
+                  }
+                >
+                  Conferir este ponto no Maps
+                </a>
+              )}
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  className="mt-1 h-4 w-4"
+                  type="checkbox"
+                  checked={pointChecked}
+                  onChange={(e) => setPointChecked(e.target.checked)}
+                />
+                Conferi que o alfinete está na casa correta da entrega.
+              </label>
+              <Button
+                disabled={!!busy || !pointChecked || !point}
+                onClick={() => void savePoint()}
+              >
+                Salvar ponto de entrega
+              </Button>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
       <Dialog
         open={!!confirmation}
         onOpenChange={(open) => {

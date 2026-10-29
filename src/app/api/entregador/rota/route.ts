@@ -2,7 +2,8 @@
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
 import { geocodeAddress } from "@/lib/delivery";
-import { fastestStopOrder, deliveryAddress } from "@/lib/driver";
+import { exactDeliveryPoint } from "@/lib/delivery-navigation";
+import { fastestStopOrder, navigationDestination } from "@/lib/driver";
 import { z } from "zod";
 const input = z.object({
   ids: z.array(z.string().min(1).max(100)).min(1).max(10),
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
         deliveryType: "ENTREGA",
         status: { in: ["PREPARANDO", "SAIU_PARA_ENTREGA"] },
       },
-      select: { id: true, address: true },
+      select: { id: true, number: true, address: true },
     }),
     prisma.restaurant.findUnique({
       where: { id: restaurantId },
@@ -72,6 +73,24 @@ export async function POST(request: Request) {
       },
       { status: 409 },
     );
+  if (
+    new Set(orders.map((o) => navigationDestination(o.address!))).size === 1
+  ) {
+    return Response.json(
+      {
+        ids,
+        destinations: Object.fromEntries(
+          orders.map((o) => [o.id, navigationDestination(o.address!)]),
+        ),
+        origin: parsed.data.origin
+          ? `${parsed.data.origin.latitude},${parsed.data.origin.longitude}`
+          : [store?.address, store?.storeCep, "Brasil"]
+              .filter(Boolean)
+              .join(", "),
+      },
+      { headers: { "Cache-Control": "private, no-store" } },
+    );
+  }
   try {
     const deadline = Date.now() + 35000;
     const origin =
@@ -86,17 +105,19 @@ export async function POST(request: Request) {
       );
     const ordered = ids.map((id) => orders.find((o) => o.id === id)!);
     const points = [origin];
+    const destinations: Record<string, string> = {};
     for (const order of ordered) {
-      if (Date.now() > deadline) throw Error("Alguns endereços demoraram para ser localizados. Organize as paradas manualmente ou tente novamente.");
+      if (Date.now() > deadline)
+        throw Error(
+          "Alguns endereços demoraram para ser localizados. Organize as paradas manualmente ou tente novamente.",
+        );
       const a = order.address!;
-      const point =
-        a.latitude != null && a.longitude != null
-          ? { latitude: a.latitude, longitude: a.longitude }
-          : await geocodeAddress(deliveryAddress(a), a.cep);
+      const point = await exactDeliveryPoint(a);
       if (!point)
         throw Error(
-          "Não foi possível localizar um dos endereços. Organize as paradas manualmente ou abra a entrega individual no Maps.",
+          `Confirme o ponto exato no mapa do pedido #${order.number} antes de calcular a sequência. O CEP não será usado como destino alternativo.`,
         );
+      destinations[order.id] = `${point.latitude},${point.longitude}`;
       points.push(point);
     }
     const coordinates = points
@@ -105,7 +126,11 @@ export async function POST(request: Request) {
     const response = await fetch(
       `https://router.project-osrm.org/table/v1/driving/${coordinates}?annotations=duration`,
       { cache: "no-store", signal: AbortSignal.timeout(10000) },
-    ).catch(() => { throw Error("O serviço de rotas está indisponível. Organize as paradas manualmente ou tente novamente."); });
+    ).catch(() => {
+      throw Error(
+        "O serviço de rotas está indisponível. Organize as paradas manualmente ou tente novamente.",
+      );
+    });
     if (!response.ok)
       throw Error(
         "O serviço de rotas está indisponível. Você pode organizar as paradas manualmente.",
@@ -119,6 +144,7 @@ export async function POST(request: Request) {
     return Response.json(
       {
         ids: sequence.map((i) => ordered[i].id),
+        destinations,
         origin: parsed.data.origin
           ? `${origin.latitude},${origin.longitude}`
           : [store?.address, store?.storeCep, "Brasil"]

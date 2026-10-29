@@ -31,7 +31,7 @@ export async function upsertAddressAction(
 
   if (addressId) {
     const locationChanged = owned && (["cep", "street", "number", "neighborhood", "city", "state"] as const).some(key => owned[key] !== parsed.data[key]);
-    await tx.address.update({ where: { id: addressId, userId: session.user.id }, data: { ...parsed.data, ...(locationChanged ? { latitude: null, longitude: null } : {}) } });
+    await tx.address.update({ where: { id: addressId, userId: session.user.id }, data: { ...parsed.data, ...(locationChanged ? { latitude: null, longitude: null, navigationLatitude: null, navigationLongitude: null } : {}) } });
   } else {
     await tx.address.create({ data: { ...parsed.data, userId: session.user.id } });
   }

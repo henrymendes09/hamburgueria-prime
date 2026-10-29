@@ -88,7 +88,7 @@ it("loads saved coupon restrictions and edits the same coupon preserving its exp
   expect(screen.queryByDisplayValue("SALVO")).toBeNull();
 });
 it("loads every address field, saves its ID and clears the editor for a new address", async () => {
-  const address = { id: "address1", userId: "user1", label: "Trabalho", cep: "01001-000", street: "Rua cadastrada", number: "123", complement: "Sala 4", neighborhood: "Centro", city: "São Paulo", state: "SP", reference: "Portão azul", isDefault: true, latitude: -23, longitude: -46, createdAt: new Date() };
+  const address = { id: "address1", userId: "user1", label: "Trabalho", cep: "01001-000", street: "Rua cadastrada", number: "123", complement: "Sala 4", neighborhood: "Centro", city: "São Paulo", state: "SP", reference: "Portão azul", isDefault: true, navigationLatitude: null, navigationLongitude: null, latitude: -23, longitude: -46, createdAt: new Date() };
   render(<AddressManager addresses={[address]} />);
   fireEvent.click(screen.getByRole("button", { name: "Editar endereço Trabalho" }));
   for (const value of [address.label, address.cep, address.street, address.number, address.complement, address.neighborhood, address.city, address.state, address.reference]) expect(screen.getByDisplayValue(value)).toBeDefined();

@@ -274,6 +274,8 @@ model Address {
   reference    String?
   latitude     Float?
   longitude    Float?
+  navigationLatitude Float?
+  navigationLongitude Float?
   isDefault    Boolean  @default(false)
   createdAt    DateTime @default(now())
 

@@ -7,6 +7,8 @@
   cep: string;
   complement: string | null;
   reference: string | null;
+  navigationLatitude?: number | null;
+  navigationLongitude?: number | null;
 };
 export type DriverOrder = {
   id: string;
@@ -32,6 +34,29 @@ export type DriverOrder = {
 export function deliveryAddress(address: DeliveryAddress) {
   return `${address.street}, ${address.number} - ${address.neighborhood}, ${address.city} - ${address.state}, ${address.cep}, Brasil`;
 }
+export function navigationDestination(address: DeliveryAddress) {
+  if (address.navigationLatitude != null && address.navigationLongitude != null)
+    return `${address.navigationLatitude},${address.navigationLongitude}`;
+  // Postal-code coordinates can be a city centroid; never use them for navigation.
+  return `${navigationStreet(address)}, ${address.number}, ${address.neighborhood}, ${address.city}, ${address.state}, Brasil`;
+}
+// Verified Maps street name; restrict this alias to its postal record.
+export function navigationStreet(address: DeliveryAddress) {
+  const normalized = (v: string) =>
+    v
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase();
+  if (
+    address.cep.replace(/\D/g, "") === "12213094" &&
+    normalized(address.city) === "sao jose dos campos" &&
+    address.state.toUpperCase() === "SP" &&
+    normalized(address.street) === "rua corrego do bengalar"
+  )
+    return "Rua Córrego Bengalar";
+  return address.street;
+}
 export function mapsRoute(destinations: string[], origin?: string) {
   if (!destinations.length || destinations.length > 4)
     throw new Error("Selecione de uma a quatro paradas por trecho.");
@@ -49,25 +74,35 @@ export function mapsRouteSections(
   stops: { id: string; address: string }[],
   origin?: string,
 ) {
+  const grouped: { id: string; address: string; ids: string[] }[] = [];
+  for (const stop of stops) {
+    const existing = grouped.find(
+      (s) =>
+        s.address.normalize("NFD").toLowerCase() ===
+        stop.address.normalize("NFD").toLowerCase(),
+    );
+    if (existing) existing.ids.push(stop.id);
+    else grouped.push({ ...stop, ids: [stop.id] });
+  }
   const sections: { url: string; ids: string[] }[] = [];
-  for (let i = 0; i < stops.length;) {
-    let count = Math.min(4, stops.length - i);
+  for (let i = 0; i < grouped.length;) {
+    let count = Math.min(4, grouped.length - i);
     while (
       count > 1 &&
       mapsRoute(
-        stops.slice(i, i + count).map((s) => s.address),
+        grouped.slice(i, i + count).map((s) => s.address),
         origin,
       ).length > 2000
     )
       count--;
-    const batch = stops.slice(i, i + count);
+    const batch = grouped.slice(i, i + count);
     const url = mapsRoute(
       batch.map((s) => s.address),
       origin,
     );
     if (url.length > 2048)
       throw new Error("Endereço muito longo para abrir no Maps.");
-    sections.push({ url, ids: batch.map((s) => s.id) });
+    sections.push({ url, ids: batch.flatMap((s) => s.ids) });
     origin = batch.at(-1)!.address;
     i += count;
   }

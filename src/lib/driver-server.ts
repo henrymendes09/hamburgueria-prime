@@ -33,6 +33,8 @@ export async function getDriverOrders(
           cep: true,
           complement: true,
           reference: true,
+          navigationLatitude: true,
+          navigationLongitude: true,
         },
       },
       items: {

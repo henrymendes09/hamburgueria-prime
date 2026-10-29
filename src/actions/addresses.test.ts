@@ -14,7 +14,7 @@ it("rejects a foreign address before changing any defaults", async () => {
 it("updates the same owned address without duplicating it and invalidates changed coordinates", async () => {
   m.find.mockResolvedValue({ ...input, id: "owned", userId: "owner", latitude: -23, longitude: -46 });
   expect((await upsertAddressAction("owned", { ...input, street: "Nova rua" })).success).toBe(true);
-  expect(m.update).toHaveBeenCalledWith({ where: { id: "owned", userId: "owner" }, data: { ...input, street: "Nova rua", latitude: null, longitude: null } });
+  expect(m.update).toHaveBeenCalledWith({ where: { id: "owned", userId: "owner" }, data: { ...input, street: "Nova rua", latitude: null, longitude: null, navigationLatitude:null,navigationLongitude:null } });
   expect(m.create).not.toHaveBeenCalled();
 });
 it("preserves coordinates when editing only the address label", async () => {
